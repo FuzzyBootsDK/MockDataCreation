@@ -1,10 +1,11 @@
 import { z } from "zod";
 import type { FieldKind, FieldType } from "./registry.ts";
 import { structuralTypes } from "./structural.ts";
+import { fakerCatalog } from "./faker-catalog.ts";
 
 export type { FieldKind, FieldType, GenContext } from "./registry.ts";
 
-export const fieldTypes: readonly FieldType[] = [...structuralTypes];
+export const fieldTypes: readonly FieldType[] = [...structuralTypes, ...fakerCatalog];
 
 const byKey = new Map(fieldTypes.map((t) => [t.key, t]));
 
