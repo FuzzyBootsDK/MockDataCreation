@@ -1,0 +1,6 @@
+packages:
+  - "packages/*"
+  - "apps/*"
+# better-sqlite3 ships prebuilt binaries; its node-gyp fallback script is not needed.
+allowBuilds:
+  better-sqlite3: false
