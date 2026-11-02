@@ -36,6 +36,11 @@ describe("structural types", () => {
     expect(getFieldType("number")!.options.safeParse({ min: 5, max: 1 }).success).toBe(false);
   });
 
+  test("number rejects a whole-number range with no integer when decimals is 0", () => {
+    expect(getFieldType("number")!.options.safeParse({ min: 0.5, max: 0.7, decimals: 0 }).success).toBe(false);
+    expect(getFieldType("number")!.options.safeParse({ min: 0.5, max: 0.7, decimals: 2 }).success).toBe(true);
+  });
+
   test("boolean truePercent 0 and 100", () => {
     expect(gen("boolean", { truePercent: 0 })).toBe(false);
     expect(gen("boolean", { truePercent: 100 })).toBe(true);
@@ -57,6 +62,14 @@ describe("structural types", () => {
 
   test("regex rejects invalid pattern", () => {
     expect(getFieldType("regex")!.options.safeParse({ pattern: "([" }).success).toBe(false);
+  });
+
+  test("regex rejects quantifiers above 1000 and accepts those at or below", () => {
+    const ok = (pattern: string) => getFieldType("regex")!.options.safeParse({ pattern }).success;
+    expect(ok("a{1001}")).toBe(false);
+    expect(ok("a{2,1001}")).toBe(false);
+    expect(ok("a{2,1000}")).toBe(true);
+    expect(ok("[A-Z]{3}-[0-9]{4}")).toBe(true);
   });
 
   test("column types depend on options", () => {

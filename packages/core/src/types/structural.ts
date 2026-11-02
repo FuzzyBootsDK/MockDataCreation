@@ -1,15 +1,29 @@
+import { faker } from "@faker-js/faker";
 import { z } from "zod";
 import { COLUMN_TYPES } from "../columns.ts";
 import { defineType, type FieldType } from "./registry.ts";
 
-const validRegex = z.string().min(1).refine((p) => {
+const MAX_QUANTIFIER = 1000;
+
+// Checks run in order and stop at the first failure.
+const validRegex = z.string().min(1).superRefine((p, ctx) => {
+  const fail = (message: string) => ctx.addIssue({ code: "custom", message });
   try {
     new RegExp(p);
-    return true;
   } catch {
-    return false;
+    return fail("Not a valid regular expression");
   }
-}, "Not a valid regular expression");
+  for (const m of p.matchAll(/\{(\d+)(?:,(\d*))?\}/g)) {
+    if (Number(m[1]) > MAX_QUANTIFIER || Number(m[2] ?? 0) > MAX_QUANTIFIER) {
+      return fail("Quantifiers above 1000 are not allowed");
+    }
+  }
+  try {
+    faker.helpers.fromRegExp(p);
+  } catch {
+    return fail("Pattern is not supported for generation");
+  }
+});
 
 export const structuralTypes: FieldType[] = [
   defineType({
@@ -37,7 +51,11 @@ export const structuralTypes: FieldType[] = [
         max: z.number().default(1000),
         decimals: z.number().int().min(0).max(10).default(0),
       })
-      .refine((o) => o.min <= o.max, { message: "min must be less than or equal to max", path: ["min"] }),
+      .refine((o) => o.min <= o.max, { message: "min must be less than or equal to max", path: ["min"] })
+      .refine((o) => o.decimals !== 0 || o.min > o.max || Math.ceil(o.min) <= Math.floor(o.max), {
+        message: "min..max contains no whole number; widen the range or set decimals",
+        path: ["min"],
+      }),
     column: (o) => (o.decimals === 0 ? "bigint" : "decimal"),
     generate: (o, ctx) =>
       o.decimals === 0
