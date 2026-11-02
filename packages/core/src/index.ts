@@ -4,3 +4,7 @@ export * from "./columns.ts";
 export { fieldTypes, getFieldType, describeFieldTypes } from "./types/index.ts";
 export type { FieldKind, FieldType, FieldTypeInfo, GenContext } from "./types/index.ts";
 export { LOCALES, REF_DATE, isKnownLocale, createFaker } from "./engine/fakers.ts";
+export { compileFormula, FormulaError } from "./formula/compile.ts";
+export type { CompiledFormula, FormulaNode } from "./formula/compile.ts";
+export { evaluateFormula, FormulaRuntimeError } from "./formula/evaluate.ts";
+export { HELPER_NAMES } from "./formula/helpers.ts";
