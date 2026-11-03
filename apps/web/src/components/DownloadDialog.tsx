@@ -17,8 +17,21 @@ export function DownloadDialog({ schema, all, types, onClose }: { schema: Schema
 
   const download = async () => {
     setError(null);
+    if (!Number.isInteger(count) || count < 0 || count > types.maxRows) {
+      setError(`Rows must be a whole number between 0 and ${types.maxRows}`);
+      return;
+    }
+    if (!Number.isInteger(seed) || seed < 0) {
+      setError("Seed must be a whole number, 0 or greater");
+      return;
+    }
     if (!withRefs) {
-      location.href = generateUrl(schema.id, { format, dialect, count, seed, ddl });
+      const a = document.createElement("a");
+      a.href = generateUrl(schema.id, { format, dialect, count, seed, ddl });
+      a.download = "";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
       onClose();
       return;
     }

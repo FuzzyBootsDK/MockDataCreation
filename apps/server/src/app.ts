@@ -30,7 +30,7 @@ export async function buildApp(opts: { config: Config; db: Db; logger?: boolean 
   app.setErrorHandler(errorHandler);
   await docsRoutes(app);
   healthRoutes(app);
-  typeRoutes(app);
+  typeRoutes(app, ctx);
   schemaRoutes(app, ctx);
   previewRoutes(app, ctx);
   generateRoutes(app, ctx);

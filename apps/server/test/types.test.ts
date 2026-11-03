@@ -12,4 +12,5 @@ test("GET /api/types", async () => {
   expect(body.formats).toEqual(["csv", "json", "ndjson", "sql"]);
   expect(body.dialects).toEqual(["pg", "mssql", "sqlite"]);
   expect(body.helpers).toContain("lower");
+  expect(body.maxRows).toBe(1000);
 });

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Schema } from "@mockgen/core";
 import { api, formatError, type Connection, type SeedEvent, type SeedMode } from "../api.ts";
 import { referencedIds } from "../fieldTree.ts";
@@ -16,6 +16,10 @@ export function SeedDialog({ schema, all, onClose }: { schema: Schema; all: Sche
   const [error, setError] = useState<string | null>(null);
   const deps = referencedIds(schema, all).map((id) => all.find((s) => s.id === id)!).filter(Boolean);
 
+  const esRef = useRef<EventSource | null>(null);
+
+  useEffect(() => () => esRef.current?.close(), []);
+
   useEffect(() => {
     api.connections().then(
       (cs) => {
@@ -27,14 +31,22 @@ export function SeedDialog({ schema, all, onClose }: { schema: Schema; all: Sche
   }, []);
 
   const start = async () => {
+    esRef.current?.close();
+    esRef.current = null;
     setError(null);
     setProgress({});
     setStatus("running");
     try {
       const { jobId } = await api.startSeed({ connectionId, schemas: [{ id: schema.id, count }], mode });
       const es = new EventSource(`/api/seed/${jobId}/events`);
+      esRef.current = es;
       es.onmessage = (m) => {
-        const e = JSON.parse(m.data) as SeedEvent;
+        let e: SeedEvent;
+        try {
+          e = JSON.parse(m.data) as SeedEvent;
+        } catch {
+          return;
+        }
         if (e.type === "start") setProgress(Object.fromEntries(e.tables.map((t) => [t.table, { inserted: 0, total: t.total }])));
         if (e.type === "progress") setProgress((p) => ({ ...p, [e.table]: { inserted: e.inserted, total: e.total } }));
         if (e.type === "error") setError(`${e.table ? `Table ${e.table}, batch ${e.batch}: ` : ""}${e.message}`);

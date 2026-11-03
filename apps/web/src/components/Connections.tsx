@@ -18,6 +18,8 @@ export function Connections() {
     void load();
   }, [load]);
 
+  const savedEntry = list.find((c) => c.id === edit.id);
+  const changed = !savedEntry || JSON.stringify(savedEntry) !== JSON.stringify(edit);
   const issue = (path: string) => issues.find((i) => i.path === path)?.message;
   const set = (patch: Partial<Connection>) => setEdit({ ...edit, ...patch });
 
@@ -36,8 +38,15 @@ export function Connections() {
 
   const remove = async () => {
     if (!edit.id || !confirm(`Delete "${edit.name}"?`)) return;
-    await api.deleteConnection(edit.id).catch((e: unknown) => setMessage(formatError(e)));
+    try {
+      await api.deleteConnection(edit.id);
+    } catch (e) {
+      setMessage(formatError(e));
+      return;
+    }
     setEdit(blank("pg"));
+    setIssues([]);
+    setMessage(null);
     await load();
   };
 
@@ -124,7 +133,11 @@ export function Connections() {
           {message && <p className={message === "Saved" || message === "Connection works" ? "muted" : "error"}>{message}</p>}
           <div className="actions">
             {edit.id && <button type="button" onClick={remove}>Delete</button>}
-            {edit.id && <button type="button" onClick={test}>Test</button>}
+            {edit.id && (
+              <button type="button" onClick={test} disabled={changed} title={changed ? "Save changes before testing" : undefined}>
+                Test
+              </button>
+            )}
             <button type="button" className="primary" onClick={save}>Save</button>
           </div>
         </section>

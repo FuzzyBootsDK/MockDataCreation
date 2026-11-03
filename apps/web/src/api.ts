@@ -6,6 +6,7 @@ export interface TypesInfo {
   formats: Format[];
   dialects: Dialect[];
   helpers: string[];
+  maxRows: number;
 }
 
 export type ConnectionKind = "pg" | "mssql" | "sqlite";
