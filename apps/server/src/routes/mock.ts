@@ -12,8 +12,12 @@ function intParam(v: string | undefined, name: string, fallback: number, max = N
   return n;
 }
 
+function idField(schema: Schema) {
+  return schema.fields.find((f) => f.name === "id" && f.type === "rowNumber");
+}
+
 function idStart(schema: Schema): number {
-  const field = schema.fields.find((f) => f.name === "id" && f.type === "rowNumber");
+  const field = idField(schema);
   if (!field) throw new HttpError(404, `Schema "${schema.slug}" needs a top-level "id" field of type rowNumber for by-id requests`);
   return typeof field.options.start === "number" ? field.options.start : 1;
 }
@@ -25,6 +29,19 @@ function bodyObject(body: unknown): Row {
 }
 
 export function mockRoutes(app: FastifyInstance, ctx: AppContext) {
+  // Front ends on other origins may call mocks; the rest of the API stays same-origin.
+  app.addHook("onRequest", async (req, reply) => {
+    if (!req.url.startsWith("/mock/")) return;
+    reply.header("access-control-allow-origin", "*");
+    if (req.method === "OPTIONS") {
+      return reply
+        .header("access-control-allow-methods", "GET,POST,PUT,PATCH,DELETE")
+        .header("access-control-allow-headers", "content-type")
+        .status(204)
+        .send();
+    }
+  });
+
   const mockSchema = (slug: string): Schema => {
     const schema = ctx.schemas.getBySlug(slug);
     if (!schema || !schema.mockEnabled) throw new HttpError(404, `No mock endpoint for "${slug}"`);
@@ -74,7 +91,8 @@ export function mockRoutes(app: FastifyInstance, ctx: AppContext) {
   app.post<{ Params: { slug: string } }>("/mock/:slug", async (req, reply) => {
     const schema = mockSchema(req.params.slug);
     const body = bodyObject(req.body);
-    return reply.status(201).send({ ...body, id: idStart(schema) + schema.defaultCount });
+    const id = idField(schema) ? idStart(schema) + schema.defaultCount : schema.defaultCount + 1;
+    return reply.status(201).send({ ...body, id });
   });
 
   const update = async (req: { params: { slug: string; id: string }; body: unknown }) => {

@@ -51,6 +51,26 @@ describe("mock API", () => {
     expect(r.total).toBeLessThanOrEqual(10);
   });
 
+  test("POST works without a rowNumber id field", async () => {
+    const { app } = await setup({ fields: [{ name: "id", type: "uuid" }, { name: "first_name", type: "person.firstName" }] });
+    const post = await app.inject({ method: "POST", url: "/mock/customers", payload: { first_name: "Zed" } });
+    expect(post.statusCode).toBe(201);
+    expect(post.json()).toEqual({ first_name: "Zed", id: 46 });
+  });
+
+  test("mock endpoints send CORS headers, API routes do not", async () => {
+    const { app } = await setup();
+    const get = await app.inject({ method: "GET", url: "/mock/customers" });
+    expect(get.headers["access-control-allow-origin"]).toBe("*");
+    const opts = await app.inject({ method: "OPTIONS", url: "/mock/customers" });
+    expect(opts.statusCode).toBe(204);
+    expect(opts.headers["access-control-allow-origin"]).toBe("*");
+    expect(opts.headers["access-control-allow-methods"]).toBe("GET,POST,PUT,PATCH,DELETE");
+    expect(opts.headers["access-control-allow-headers"]).toBe("content-type");
+    const api = await app.inject({ method: "GET", url: "/api/schemas" });
+    expect(api.headers["access-control-allow-origin"]).toBeUndefined();
+  });
+
   test("writes echo and store nothing", async () => {
     const { app } = await setup();
     const before = (await app.inject({ method: "GET", url: "/mock/customers/3" })).json();
