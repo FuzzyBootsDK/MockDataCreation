@@ -113,4 +113,51 @@ describe("validateSchema", () => {
     expect(r.issues.map((i) => i.path)).toEqual(["fields"]);
     expect(r.issues[0]!.message).toContain("Circular reference between schemas: b → a → b");
   });
+
+  test("duplicate formula field names do not crash", () => {
+    const r = validateSchema(
+      {
+        ...base,
+        fields: [
+          { name: "a", type: "formula", options: { expression: "1" } },
+          { name: "a", type: "formula", options: { expression: "2" } },
+        ],
+      },
+      saved,
+    );
+    expect(r.issues.map((i) => i.path)).toEqual(["fields[1].name"]);
+  });
+
+  test("deeply nested input is rejected without overflowing the stack", () => {
+    let field: Record<string, unknown> = { name: "leaf", type: "uuid" };
+    for (let i = 0; i < 20_000; i++) field = { name: "o", type: "object", children: [field] };
+    const r = validateSchema({ ...base, fields: [field] }, saved);
+    expect(r.issues.some((i) => i.message.includes("Nesting deeper than 5"))).toBe(true);
+  });
+
+  test("editing a schema checks the references of its dependents", () => {
+    const orders = SchemaSchema.parse({
+      id: "orders",
+      name: "Orders",
+      slug: "orders",
+      fields: [
+        { name: "id", type: "rowNumber" },
+        { name: "customer", type: "reference", options: { schemaId: "customers", fieldName: "id" } },
+      ],
+    });
+    const others = [saved[0]!, orders];
+    const renamed = {
+      id: "customers",
+      name: "Customers",
+      slug: "customers",
+      fields: [{ name: "key", type: "rowNumber" }],
+    };
+    expect(validateSchema(renamed, others).issues).toEqual([
+      {
+        path: "fields",
+        message: 'Schema "orders" references field "id", which this change removes or turns into an object/array',
+      },
+    ]);
+    expect(validateSchema(saved[0], others).issues).toEqual([]);
+  });
 });

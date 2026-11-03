@@ -16,12 +16,29 @@ export function referencedSchemaIds(schema: Schema): string[] {
   return out;
 }
 
+// Top-level field names of `schema` that reference `targetId`, deduplicated.
+export function referencedFieldNames(schema: Schema, targetId: string): string[] {
+  const out: string[] = [];
+  const walk = (fields: Field[]) => {
+    for (const f of fields) {
+      if (f.type === "reference" && f.options.schemaId === targetId && typeof f.options.fieldName === "string") {
+        if (!out.includes(f.options.fieldName)) out.push(f.options.fieldName);
+      }
+      if (f.children) walk(f.children);
+    }
+  };
+  walk(schema.fields);
+  return out;
+}
+
 export function findReferenceCycle(schemas: Schema[], startId: string): string[] | null {
   const byId = new Map(schemas.map((s) => [s.id, s]));
   const path: string[] = [];
+  const done = new Set<string>();
   const visit = (id: string): string[] | null => {
     const at = path.indexOf(id);
     if (at >= 0) return [...path.slice(at), id];
+    if (done.has(id)) return null;
     const s = byId.get(id);
     if (!s) return null;
     path.push(id);
@@ -30,6 +47,7 @@ export function findReferenceCycle(schemas: Schema[], startId: string): string[]
       if (cycle) return cycle;
     }
     path.pop();
+    done.add(id);
     return null;
   };
   return visit(startId);

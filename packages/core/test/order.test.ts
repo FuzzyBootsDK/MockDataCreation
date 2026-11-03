@@ -37,4 +37,15 @@ describe("order", () => {
     expect(findReferenceCycle(set, "a")).toEqual(["a", "b", "c", "a"]);
     expect(findReferenceCycle(set, "d")).toBeNull();
   });
+
+  test("findReferenceCycle does not re-explore diamonds", () => {
+    const depth = 60;
+    const set: Schema[] = [];
+    for (let i = 0; i < depth; i++) {
+      const next = [`a${i + 1}`, `b${i + 1}`];
+      set.push(s(`a${i}`, next), s(`b${i}`, next));
+    }
+    set.push(s(`a${depth}`), s(`b${depth}`));
+    expect(findReferenceCycle(set, "a0")).toBeNull();
+  });
 });

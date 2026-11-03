@@ -3,7 +3,7 @@ import { getFieldType } from "./types/index.ts";
 import { isKnownLocale } from "./engine/fakers.ts";
 import { compileFormula, FormulaError } from "./formula/compile.ts";
 import { formulaOrder, FormulaCycleError } from "./engine/plan.ts";
-import { findReferenceCycle } from "./order.ts";
+import { findReferenceCycle, referencedFieldNames } from "./order.ts";
 
 export interface ValidationIssue {
   path: string;
@@ -17,7 +17,27 @@ export function formatPath(path: PropertyKey[]): string {
   }, "");
 }
 
+// Iterative so that absurdly deep input cannot overflow the stack before zod runs.
+// Level counting matches checkFields: the top-level list is level 0.
+function exceedsNesting(fields: unknown): boolean {
+  const stack: { list: unknown; level: number }[] = [{ list: fields, level: 0 }];
+  while (stack.length) {
+    const { list, level } = stack.pop()!;
+    if (!Array.isArray(list)) continue;
+    for (const field of list) {
+      const children = (field as { children?: unknown } | null)?.children;
+      if (!Array.isArray(children)) continue;
+      if (level + 1 > MAX_NESTING) return true;
+      stack.push({ list: children, level: level + 1 });
+    }
+  }
+  return false;
+}
+
 export function validateSchema(input: unknown, others: Schema[]): { schema?: Schema; issues: ValidationIssue[] } {
+  if (exceedsNesting((input as { fields?: unknown } | null)?.fields)) {
+    return { issues: [{ path: "fields", message: `Nesting deeper than ${MAX_NESTING} levels is not allowed` }] };
+  }
   const parsed = SchemaSchema.safeParse(input);
   if (!parsed.success) {
     return { issues: parsed.error.issues.map((i) => ({ path: formatPath(i.path), message: i.message })) };
@@ -34,6 +54,20 @@ export function validateSchema(input: unknown, others: Schema[]): { schema?: Sch
   }
 
   checkFields(schema.fields, "fields", 0, { schema, set, issues });
+
+  // Dependents keep their references to this schema valid after an edit.
+  for (const dependent of others) {
+    if (dependent.id === schema.id) continue;
+    for (const fieldName of referencedFieldNames(dependent, schema.id)) {
+      const field = schema.fields.find((f) => f.name === fieldName);
+      if (!field || field.type === "object" || field.type === "array") {
+        issues.push({
+          path: "fields",
+          message: `Schema "${dependent.slug}" references field "${fieldName}", which this change removes or turns into an object/array`,
+        });
+      }
+    }
+  }
 
   if (issues.length === 0) {
     const cycle = findReferenceCycle(set, schema.id);
@@ -58,7 +92,8 @@ function checkFields(fields: Field[], path: string, level: number, ctx: Ctx): vo
 
   fields.forEach((field, i) => {
     const at = `${path}[${i}]`;
-    if (seen.has(field.name)) ctx.issues.push({ path: `${at}.name`, message: "Duplicate field name" });
+    const duplicate = seen.has(field.name);
+    if (duplicate) ctx.issues.push({ path: `${at}.name`, message: "Duplicate field name" });
     seen.add(field.name);
 
     const type = getFieldType(field.type);
@@ -95,7 +130,8 @@ function checkFields(fields: Field[], path: string, level: number, ctx: Ctx): vo
         const siblings = new Set(fields.map((f) => f.name));
         const unknown = refs.filter((r) => !siblings.has(r));
         for (const name of unknown) ctx.issues.push({ path: `${at}.options.expression`, message: `Unknown field "${name}"` });
-        if (!unknown.length) formulas.push({ name: field.name, refs, index: i });
+        // A duplicate name is already reported; keeping it out of the plan avoids ambiguous lookups.
+        if (!unknown.length && !duplicate) formulas.push({ name: field.name, refs, index: i });
       } catch (e) {
         if (!(e instanceof FormulaError)) throw e;
         ctx.issues.push({ path: `${at}.options.expression`, message: e.message });
