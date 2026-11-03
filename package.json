@@ -6,6 +6,8 @@
   "engines": { "node": ">=24" },
   "scripts": {
     "test": "pnpm -r --if-present test",
-    "typecheck": "pnpm -r --if-present typecheck"
+    "typecheck": "pnpm -r --if-present typecheck",
+    "build": "pnpm --filter @mockgen/web build",
+    "start": "pnpm --filter @mockgen/server start"
   }
 }
