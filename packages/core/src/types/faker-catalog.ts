@@ -323,6 +323,7 @@ const patternTypes: FieldType[] = [
     key: "characterSequence",
     category: "Basic",
     label: "Character Sequence",
+    description: "A pattern: # digit, ? letter, * either, e.g. INV-#####",
     options: z.object({
       pattern: z.string().min(1, "Enter a pattern").max(200).describe("# digit, ? letter, * digit or letter").default("###-???"),
     }),

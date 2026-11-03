@@ -14,3 +14,18 @@ test("GET /api/types", async () => {
   expect(body.helpers).toContain("lower");
   expect(body.maxRows).toBe(1000);
 });
+
+test("types carry three examples or a description for the type picker", async () => {
+  const app = await makeApp();
+  const types = (await app.inject({ method: "GET", url: "/api/types" })).json().types as {
+    key: string; examples: string[]; description?: string;
+  }[];
+  const email = types.find((t) => t.key === "internet.email")!;
+  expect(email.examples).toHaveLength(3);
+  expect(email.examples.every((e) => e.includes("@"))).toBe(true);
+  const formula = types.find((t) => t.key === "formula")!;
+  expect(formula.examples).toEqual([]);
+  expect(formula.description).toMatch(/other fields/);
+  expect(types.every((t) => t.examples.length === 3 || t.description)).toBe(true);
+  expect(types.every((t) => t.examples.every((e) => e.length <= 60))).toBe(true);
+});

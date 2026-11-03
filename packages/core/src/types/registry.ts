@@ -13,6 +13,8 @@ export interface FieldType {
   key: string;
   category: string;
   label: string;
+  /** Shown in the type picker instead of example values. */
+  description?: string;
   kind: FieldKind;
   options: z.ZodObject;
   column(options: any): ColumnType;
@@ -23,6 +25,7 @@ export function defineType<S extends z.ZodObject>(def: {
   key: string;
   category: string;
   label: string;
+  description?: string;
   kind?: FieldKind;
   options?: S;
   column: ColumnType | ((options: z.output<S>) => ColumnType);
@@ -33,6 +36,7 @@ export function defineType<S extends z.ZodObject>(def: {
     key: def.key,
     category: def.category,
     label: def.label,
+    description: def.description,
     kind: def.kind ?? "value",
     options: def.options ?? z.object({}),
     column: typeof column === "function" ? column : () => column,

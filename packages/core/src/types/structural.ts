@@ -30,6 +30,7 @@ export const structuralTypes: FieldType[] = [
     key: "rowNumber",
     category: "Basic",
     label: "Row Number",
+    description: "Counts up one per row: 1, 2, 3…",
     options: z.object({ start: z.number().int().default(1) }),
     column: "bigint",
     generate: (o, ctx) => o.start + ctx.rowIndex,
@@ -74,6 +75,7 @@ export const structuralTypes: FieldType[] = [
     key: "customList",
     category: "Basic",
     label: "Custom List",
+    description: "Picks from values you enter, optionally weighted",
     options: z.object({
       values: z
         .array(z.object({ value: z.string(), weight: z.number().positive().default(1) }))
@@ -86,6 +88,7 @@ export const structuralTypes: FieldType[] = [
     key: "regex",
     category: "Basic",
     label: "Regular Expression",
+    description: "Text matching a regular expression, e.g. [A-Z]{3}-\\d{4}",
     options: z.object({ pattern: validRegex }),
     column: "text",
     generate: (o, ctx) => ctx.faker.helpers.fromRegExp(o.pattern),
@@ -94,6 +97,7 @@ export const structuralTypes: FieldType[] = [
     key: "formula",
     category: "Advanced",
     label: "Formula",
+    description: "Computed from other fields, e.g. concat(first_name, \" \", last_name)",
     kind: "formula",
     options: z.object({
       expression: z.string().min(1, "Enter an expression"),
@@ -105,6 +109,7 @@ export const structuralTypes: FieldType[] = [
     key: "reference",
     category: "Advanced",
     label: "Reference (another schema)",
+    description: "A value from another saved schema's rows, for foreign keys",
     kind: "reference",
     options: z.object({
       schemaId: z.string().min(1, "Choose a schema"),
@@ -117,6 +122,7 @@ export const structuralTypes: FieldType[] = [
     key: "object",
     category: "Advanced",
     label: "JSON Object (nested fields)",
+    description: "Groups nested fields into one JSON object",
     kind: "object",
     column: "json",
   }),
@@ -124,6 +130,7 @@ export const structuralTypes: FieldType[] = [
     key: "array",
     category: "Advanced",
     label: "JSON Array (repeated nested fields)",
+    description: "A JSON array of items built from nested fields",
     kind: "array",
     options: z
       .object({
