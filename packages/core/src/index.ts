@@ -8,3 +8,6 @@ export { compileFormula, FormulaError } from "./formula/compile.ts";
 export type { CompiledFormula, FormulaNode } from "./formula/compile.ts";
 export { evaluateFormula, FormulaRuntimeError } from "./formula/evaluate.ts";
 export { HELPER_NAMES } from "./formula/helpers.ts";
+export { DataGenerator } from "./engine/generator.ts";
+export { formulaOrder, FormulaCycleError, planFields } from "./engine/plan.ts";
+export type { FieldListPlan, PlannedField } from "./engine/plan.ts";
