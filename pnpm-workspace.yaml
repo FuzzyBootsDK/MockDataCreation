@@ -2,5 +2,11 @@ packages:
   - "packages/*"
   - "apps/*"
 # better-sqlite3 ships prebuilt binaries; its node-gyp fallback script is not needed.
+# cpu-features/ssh2 (via testcontainers) have optional native builds; protobufjs postinstall is not needed.
 allowBuilds:
   better-sqlite3: false
+  cpu-features: false
+  protobufjs: false
+  ssh2: false
+minimumReleaseAgeExclude:
+  - fastify@5.12.8
