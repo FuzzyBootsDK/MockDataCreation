@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Dialect, Field, Format, Schema, ValidationIssue } from "@mockgen/core";
 import { ApiError, api, downloadDraft, formatError, type NewSchema, type TypesInfo } from "../api.ts";
 import { navigate } from "../App.tsx";
-import { slugify } from "../fieldTree.ts";
+import { newId, slugify } from "../fieldTree.ts";
 import { usePreview } from "../usePreview.ts";
 import { FieldList, type EditorCtx } from "./FieldList.tsx";
 import { DownloadDialog } from "./DownloadDialog.tsx";
@@ -15,7 +15,7 @@ type Draft = NewSchema & { id: string; fields: Field[] };
 const DIALECT_LABELS: Record<Dialect, string> = { pg: "PostgreSQL", mssql: "SQL Server", sqlite: "SQLite" };
 
 const emptyDraft = (): Draft => ({
-  id: crypto.randomUUID(),
+  id: newId(),
   name: "",
   slug: "",
   locale: "en",

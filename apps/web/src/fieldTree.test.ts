@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import type { Field, Schema } from "@mockgen/core";
 import {
-  appendTo, getAt, issuesAt, moveWithin, newField, pathString, referencedIds, removeAt, slugify, updateAt,
+  appendTo, getAt, issuesAt, moveWithin, newField, newId, pathString, referencedIds, removeAt, slugify, updateAt,
 } from "./fieldTree.ts";
 
 const f = (name: string, children?: Field[]): Field => ({ name, type: children ? "object" : "uuid", options: {}, blankPercent: 0, children });
@@ -49,6 +49,19 @@ describe("fieldTree", () => {
   test("slugify", () => {
     expect(slugify("  Order Lines (DK) ")).toBe("order-lines-dk");
     expect(slugify("Kunder æøå")).toBe("kunder-aeoa");
+  });
+
+  test("newId falls back when crypto.randomUUID is missing (plain HTTP)", () => {
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+    expect(newId()).toMatch(uuid);
+    const original = crypto.randomUUID;
+    try {
+      Object.defineProperty(crypto, "randomUUID", { value: undefined, configurable: true });
+      expect(newId()).toMatch(uuid);
+      expect(newId()).not.toBe(newId());
+    } finally {
+      Object.defineProperty(crypto, "randomUUID", { value: original, configurable: true });
+    }
   });
 
   test("referencedIds is transitive and parent-first", () => {
