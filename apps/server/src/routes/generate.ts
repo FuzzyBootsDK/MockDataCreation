@@ -39,12 +39,31 @@ function attachment(reply: FastifyReply, mime: string, filename: string) {
   return reply.type(mime).header("content-disposition", `attachment; filename="${filename}"`);
 }
 
+function logWarnings(app: FastifyInstance, gen: DataGenerator, label: string) {
+  if (gen.warnings) app.log.warn({ label, warnings: gen.warnings }, "formula warnings during generation");
+}
+
 function stream(chunks: Iterable<string>, gen: DataGenerator, app: FastifyInstance, label: string): Readable {
   const s = Readable.from(chunks);
-  s.on("end", () => {
-    if (gen.warnings) app.log.warn({ label, warnings: gen.warnings }, "formula warnings during generation");
-  });
+  s.on("end", () => logWarnings(app, gen, label));
   return s;
+}
+
+/** Zip of one entry per generator; entry errors fail the zip, and closing the zip tears down unfinished entries. */
+export function zipEntries(entries: { name: string; chunks: Iterable<string> }[], onEnd: () => void): Readable {
+  const zip = new yazl.ZipFile();
+  const sources = entries.map((e) => {
+    const src = Readable.from(e.chunks);
+    src.on("error", (err) => zip.outputStream.destroy(err));
+    zip.addReadStream(src, e.name);
+    return src;
+  });
+  zip.outputStream.on("end", onEnd);
+  zip.outputStream.on("close", () => {
+    for (const src of sources) if (!src.readableEnded && !src.destroyed) src.destroy();
+  });
+  zip.end();
+  return zip.outputStream;
 }
 
 function* concat(parts: Iterable<string>[]): Generator<string> {
@@ -72,26 +91,40 @@ export function generateRoutes(app: FastifyInstance, ctx: AppContext) {
     Body: { schemaIds?: string[]; counts?: Record<string, number>; format?: string; dialect?: string; seed?: number; ddl?: boolean };
   }>("/api/generate", async (req, reply) => {
     const body = req.body ?? {};
+    const ids = body.schemaIds;
+    if (!Array.isArray(ids) || !ids.every((x) => typeof x === "string")) {
+      throw new HttpError(400, "schemaIds must be an array of strings");
+    }
+    if (body.counts !== undefined) {
+      const c = body.counts as unknown;
+      if (typeof c !== "object" || c === null || Array.isArray(c) || !Object.values(c).every((v) => typeof v === "number")) {
+        throw new HttpError(400, "counts must be an object mapping schema ids to numbers");
+      }
+      if (Object.keys(c).some((k) => !ids.includes(k))) {
+        throw new HttpError(400, "counts can only be given for schemas listed in schemaIds");
+      }
+    }
     const format = parseFormat(body.format);
     const dialect = parseDialect(body.dialect);
     const all = ctx.schemas.all();
-    const requested = (body.schemaIds ?? []).map((id) => ({ id, count: body.counts?.[id] }));
+    const requested = ids.map((id) => ({ id, count: body.counts?.[id] }));
     const { items, seed } = resolveExport(all, requested, {
       maxRows: ctx.config.maxRows,
       seed: body.seed === undefined ? undefined : parseSeed(body.seed, 0),
     });
     const gen = new DataGenerator(all);
     const fileFor = (item: ExportItem) =>
-      formatRows(format, item.schema, all, gen.rows(item.schema.id, item.count, seed), { dialect, ddl: body.ddl === true });
+      formatRows(format, item.schema, all, gen.rows(item.schema.id, item.count, seed), { dialect, ddl: truthy(body.ddl) });
 
     if (format === "sql") {
       const chunks = concat(items.map((i) => fileFor(i)));
       return attachment(reply, FORMAT_MIME.sql, "mockgen.sql").send(stream(chunks, gen, app, "mockgen.sql"));
     }
 
-    const zip = new yazl.ZipFile();
-    for (const item of items) zip.addReadStream(Readable.from(fileFor(item)), `${item.schema.slug}.${format}`);
-    zip.end();
-    return attachment(reply, "application/zip", "mockgen.zip").send(zip.outputStream);
+    const out = zipEntries(
+      items.map((i) => ({ name: `${i.schema.slug}.${format}`, chunks: fileFor(i) })),
+      () => logWarnings(app, gen, "mockgen.zip"),
+    );
+    return attachment(reply, "application/zip", "mockgen.zip").send(out);
   });
 }

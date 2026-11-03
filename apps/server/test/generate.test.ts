@@ -1,5 +1,7 @@
 import AdmZip from "adm-zip";
+import { Readable } from "node:stream";
 import { describe, expect, test } from "vitest";
+import { zipEntries } from "../src/routes/generate.ts";
 import { createSchema, customersInput, makeApp, ordersInput } from "./helpers.ts";
 
 describe("GET /api/schemas/:id/generate", () => {
@@ -79,5 +81,93 @@ describe("POST /api/generate", () => {
       payload: { schemaIds: [o.id, c.id], counts: { [c.id]: 99 }, format: "sql" },
     });
     expect(r.statusCode).toBe(400);
+  });
+});
+
+describe("POST /api/generate validation and integrity", () => {
+  test("children reference parents generated with the same seed (uuid keys)", async () => {
+    const app = await makeApp();
+    const c = await createSchema(app, {
+      name: "C", slug: "c", defaultCount: 10, seed: 1,
+      fields: [{ name: "id", type: "rowNumber" }, { name: "uid", type: "uuid" }],
+    });
+    const o = await createSchema(app, {
+      name: "O", slug: "o", defaultCount: 30, seed: 2,
+      fields: [{ name: "customer_uid", type: "reference", options: { schemaId: c.id, fieldName: "uid" } }],
+    });
+    const r = await app.inject({ method: "POST", url: "/api/generate", payload: { schemaIds: [o.id], format: "json", seed: 123 } });
+    const zip = new AdmZip(r.rawPayload);
+    const uids = new Set((JSON.parse(zip.readAsText("c.json")) as { uid: string }[]).map((x) => x.uid));
+    const orders = JSON.parse(zip.readAsText("o.json")) as { customer_uid: string }[];
+    expect(orders).toHaveLength(30);
+    expect(orders.every((x) => uids.has(x.customer_uid))).toBe(true);
+  });
+
+  test("malformed bodies are 400", async () => {
+    const app = await makeApp();
+    const c = await createSchema(app, customersInput);
+    const bodies: unknown[] = [
+      {},
+      { schemaIds: c.id },
+      { schemaIds: [1] },
+      { schemaIds: [c.id], counts: [] },
+      { schemaIds: [c.id], counts: "x" },
+      { schemaIds: [c.id], counts: { [c.id]: "3" } },
+      { schemaIds: [c.id], counts: { other: 3 } },
+    ];
+    for (const b of bodies) {
+      const r = await app.inject({ method: "POST", url: "/api/generate", payload: b as object });
+      expect(r.statusCode, JSON.stringify(b)).toBe(400);
+    }
+    const r = await app.inject({ method: "POST", url: "/api/generate", payload: { schemaIds: [c.id], counts: { other: 3 } } });
+    expect(r.json().error).toBe("counts can only be given for schemas listed in schemaIds");
+  });
+
+  test("ddl accepts the same truthy values as the GET route", async () => {
+    const app = await makeApp();
+    const c = await createSchema(app, customersInput);
+    const r = await app.inject({ method: "POST", url: "/api/generate", payload: { schemaIds: [c.id], format: "sql", ddl: "true" } });
+    expect(r.body).toContain("CREATE TABLE");
+  });
+});
+
+describe("zipEntries teardown", () => {
+  test("an entry error destroys the zip stream with that error", async () => {
+    function* bad() {
+      yield "a";
+      throw new Error("boom");
+    }
+    const out = zipEntries([{ name: "x.txt", chunks: bad() }], () => {});
+    await expect(
+      new Promise((resolve, reject) => {
+        out.on("error", reject);
+        out.on("end", resolve);
+        out.resume();
+      }),
+    ).rejects.toThrow("boom");
+  });
+
+  test("closing the zip early destroys unfinished entry generators", async () => {
+    let cleaned = false;
+    function* endless() {
+      try {
+        for (;;) yield "x".repeat(1024);
+      } finally {
+        cleaned = true;
+      }
+    }
+    const out = zipEntries([{ name: "x.txt", chunks: endless() }], () => {});
+    await new Promise<void>((resolve) => out.once("data", () => resolve()));
+    out.destroy();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(cleaned).toBe(true);
+  });
+
+  test("onEnd fires after a successful zip", async () => {
+    let ended = false;
+    const out = zipEntries([{ name: "x.txt", chunks: Readable.from(["hi"]) }], () => (ended = true));
+    out.resume();
+    await new Promise((r) => out.on("end", r));
+    expect(ended).toBe(true);
   });
 });
