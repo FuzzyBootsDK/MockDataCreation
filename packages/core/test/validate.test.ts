@@ -24,6 +24,12 @@ describe("validateSchema", () => {
     expect(r.schema?.locale).toBe("en");
   });
 
+  test("empty name gets a friendly message", () => {
+    expect(validateSchema({ ...base, name: "", fields: [{ name: "id", type: "rowNumber" }] }, saved).issues).toEqual([
+      { path: "name", message: "Enter a name" },
+    ]);
+  });
+
   test("zod issues are mapped to bracket paths", () => {
     expect(paths({ ...base, fields: [{ name: "1x", type: "uuid" }] })).toContain("fields[0].name");
   });
