@@ -4,6 +4,8 @@ import { referencedSchemaIds, validateSchema, type Schema } from "@mockgen/core"
 import type { AppContext } from "../app.ts";
 import { HttpError, ValidationFailed } from "../errors.ts";
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function requireSchema(ctx: AppContext, id: string): Schema {
   const schema = ctx.schemas.get(id);
   if (!schema) throw new HttpError(404, `Schema ${id} not found`);
@@ -23,7 +25,9 @@ export function schemaRoutes(app: FastifyInstance, ctx: AppContext) {
   app.get<{ Params: { id: string } }>("/api/schemas/:id", async (req) => requireSchema(ctx, req.params.id));
 
   app.post("/api/schemas", async (req, reply) => {
-    const schema = validated(ctx, req.body, randomUUID());
+    const sent = (req.body as { id?: unknown } | null)?.id;
+    const keep = typeof sent === "string" && UUID.test(sent) && !ctx.schemas.get(sent);
+    const schema = validated(ctx, req.body, keep ? sent : randomUUID());
     ctx.schemas.save(schema);
     return reply.status(201).send(schema);
   });

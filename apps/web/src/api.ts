@@ -69,7 +69,7 @@ async function request<T>(method: string, url: string, body?: unknown): Promise<
 export const api = {
   types: () => request<TypesInfo>("GET", "/api/types"),
   schemas: () => request<Schema[]>("GET", "/api/schemas"),
-  createSchema: (s: NewSchema) => request<Schema>("POST", "/api/schemas", s),
+  createSchema: (s: NewSchema & { id?: string }) => request<Schema>("POST", "/api/schemas", s),
   updateSchema: (id: string, s: NewSchema) => request<Schema>("PUT", `/api/schemas/${id}`, s),
   deleteSchema: (id: string) => request<void>("DELETE", `/api/schemas/${id}`),
   preview: (schema: unknown, count = 10) => request<{ rows: Row[]; warnings: number }>("POST", "/api/preview", { schema, count }),

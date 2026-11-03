@@ -32,8 +32,7 @@ export function SchemaList() {
 
   const importFile = (file: File) =>
     run(async () => {
-      const { id: _id, ...rest } = JSON.parse(await file.text()) as NewSchema & { id?: string };
-      return api.createSchema(rest);
+      return api.createSchema(JSON.parse(await file.text()) as NewSchema & { id?: string });
     });
 
   return (

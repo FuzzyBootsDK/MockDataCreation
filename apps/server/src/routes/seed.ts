@@ -5,6 +5,7 @@ import { resolveExport } from "../export-plan.ts";
 import { SEED_MODES, runSeed, type SeedEvent, type SeedMode } from "../seed/runner.ts";
 import { openTarget, type SeedTarget } from "../seed/targets.ts";
 import { requireConnection } from "./connections.ts";
+import { parseSeed } from "./generate.ts";
 
 interface SeedBody {
   connectionId?: string;
@@ -26,7 +27,17 @@ export function seedRoutes(app: FastifyInstance, ctx: AppContext) {
     const conn = requireConnection(ctx, String(body.connectionId));
     const all = ctx.schemas.all();
     if (!Array.isArray(body.schemas)) throw new HttpError(400, "schemas must be an array");
-    const { items, seed } = resolveExport(all, body.schemas, { maxRows: ctx.config.maxRows, seed: body.seed });
+    const valid = body.schemas.every(
+      (s: unknown) =>
+        typeof s === "object" && s !== null && !Array.isArray(s) &&
+        typeof (s as { id?: unknown }).id === "string" &&
+        ((s as { count?: unknown }).count === undefined || Number.isInteger((s as { count?: unknown }).count)),
+    );
+    if (!valid) throw new HttpError(400, "schemas must be objects with a string id and an optional integer count");
+    const { items, seed } = resolveExport(all, body.schemas, {
+      maxRows: ctx.config.maxRows,
+      seed: body.seed === undefined ? undefined : parseSeed(body.seed, 0),
+    });
     const job = ctx.seedJobs.create();
     const emit = (e: SeedEvent) => ctx.seedJobs.emit(job, e);
 

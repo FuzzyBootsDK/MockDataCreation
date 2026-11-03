@@ -88,6 +88,17 @@ describe("seeding into SQLite", () => {
     expect((await app.inject({ method: "GET", url: "/api/seed/nope" })).statusCode).toBe(404);
   });
 
+  test("seed and schemas elements are validated", async () => {
+    const { app, c, conn } = await setup();
+    const post = (extra: object) =>
+      app.inject({ method: "POST", url: "/api/seed", payload: { connectionId: conn.id, schemas: [{ id: c.id }], mode: "create", ...extra } });
+    expect((await post({ seed: 1.5 })).statusCode).toBe(400);
+    expect((await post({ seed: "x" })).statusCode).toBe(400);
+    expect((await post({ schemas: [null] })).statusCode).toBe(400);
+    expect((await post({ schemas: [{ id: 5 }] })).statusCode).toBe(400);
+    expect((await post({ schemas: [{ id: c.id, count: 1.5 }] })).statusCode).toBe(400);
+  });
+
   test("connection errors end the job with an error event", async () => {
     const { app, c } = await setup();
     const conn = (

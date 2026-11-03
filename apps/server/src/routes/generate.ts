@@ -26,7 +26,7 @@ export function parseCount(v: unknown, fallback: number, maxRows: number): numbe
   return n;
 }
 
-function parseSeed(v: unknown, fallback: number): number {
+export function parseSeed(v: unknown, fallback: number): number {
   if (v === undefined || v === "") return fallback;
   const n = Number(v);
   if (!Number.isInteger(n) || n < 0 || n > 2 ** 31 - 1) throw new HttpError(400, "seed must be a non-negative integer");

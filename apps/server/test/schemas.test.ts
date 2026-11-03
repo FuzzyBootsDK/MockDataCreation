@@ -19,6 +19,16 @@ describe("/api/schemas", () => {
     expect(created.id).not.toBe("mine");
   });
 
+  test("create keeps a fresh client-supplied UUID but not one already in use", async () => {
+    const app = await makeApp();
+    const id = "7b0f8f0e-3c1d-4b8e-9a53-0d1f3c2b4a5e";
+    const created = await createSchema(app, { ...customersInput, id });
+    expect(created.id).toBe(id);
+    const again = await createSchema(app, { ...customersInput, slug: "customers-2", id });
+    expect(again.id).not.toBe(id);
+    expect(again.id).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
   test("validation errors return 400 with paths", async () => {
     const app = await makeApp();
     const r = await app.inject({

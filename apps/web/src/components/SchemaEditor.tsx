@@ -10,9 +10,10 @@ import { MockPanel } from "./MockPanel.tsx";
 import { Preview } from "./Preview.tsx";
 import { SeedDialog } from "./SeedDialog.tsx";
 
-type Draft = NewSchema & { id?: string; fields: Field[] };
+type Draft = NewSchema & { id: string; fields: Field[] };
 
 const emptyDraft = (): Draft => ({
+  id: crypto.randomUUID(),
   name: "",
   slug: "",
   locale: "en",
@@ -83,12 +84,13 @@ export function SchemaEditor({ id, types }: { id: string | null; types: TypesInf
   const save = async () => {
     try {
       const { id: draftId, ...body } = draft;
-      const s = draftId ? await api.updateSchema(draftId, body) : await api.createSchema(body);
+      const isNew = saved === null;
+      const s = isNew ? await api.createSchema({ id: draftId, ...body }) : await api.updateSchema(draftId, body);
       setSaved(s);
       setDraft(s);
       setSaveIssues([]);
       setMessage("Saved");
-      if (!draftId) navigate(`#/schemas/${s.id}`);
+      if (isNew) navigate(`#/schemas/${s.id}`);
     } catch (e) {
       if (e instanceof ApiError) setSaveIssues(e.issues);
       setMessage(formatError(e));
