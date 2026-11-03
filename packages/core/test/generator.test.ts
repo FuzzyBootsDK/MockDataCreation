@@ -80,9 +80,28 @@ describe("DataGenerator", () => {
   });
 
   test("reference resolution does not disturb the parent row's sequence", () => {
-    const withRef = new DataGenerator([customers, orders]).row("orders", 3, 1);
-    const again = new DataGenerator([customers, orders]).row("orders", 3, 1);
-    expect(withRef).toEqual(again);
+    // The reference comes before faker-driven fields, so a shared Faker would let
+    // resolving a customer (a reseed) change `a` and `b`. Streamed rows (warm
+    // reference cache) must match fresh single-row generators (cold cache).
+    const ordersLate = schema({
+      id: "orders_late",
+      slug: "orders-late",
+      fields: [
+        { name: "id", type: "rowNumber" },
+        { name: "customer_id", type: "reference", options: { schemaId: "customers", fieldName: "id" } },
+        { name: "a", type: "uuid" },
+        { name: "b", type: "person.firstName" },
+      ],
+    });
+    const streamed = [...new DataGenerator([customers, ordersLate]).rows("orders_late", 50, 1)];
+    for (let i = 0; i < streamed.length; i++) {
+      expect(new DataGenerator([customers, ordersLate]).row("orders_late", i, 1)).toEqual(streamed[i]);
+    }
+  });
+
+  test("row(i) with a reference equals row i of the stream", () => {
+    const all = [...new DataGenerator([customers, orders]).rows("orders", 10, 1)];
+    expect(new DataGenerator([customers, orders]).row("orders", 7, 1)).toEqual(all[7]);
   });
 
   test("blankPercent 100 always null, 0 never null, 30 roughly 30%", () => {
