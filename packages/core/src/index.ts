@@ -11,3 +11,6 @@ export { HELPER_NAMES } from "./formula/helpers.ts";
 export { DataGenerator } from "./engine/generator.ts";
 export { formulaOrder, FormulaCycleError, planFields } from "./engine/plan.ts";
 export type { FieldListPlan, PlannedField } from "./engine/plan.ts";
+export { formatPath, validateSchema } from "./validate.ts";
+export type { ValidationIssue } from "./validate.ts";
+export { findReferenceCycle, referencedSchemaIds, withDependencies } from "./order.ts";
