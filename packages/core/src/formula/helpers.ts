@@ -1,4 +1,11 @@
+import { MAX_FORMULA_TEXT } from "../model.ts";
+
 export class FormulaRuntimeError extends Error {}
+
+export function capText(s: string): string {
+  if (s.length > MAX_FORMULA_TEXT) throw new FormulaRuntimeError("Text result too long");
+  return s;
+}
 
 export function toNumber(v: unknown): number {
   const n = typeof v === "number" ? v : typeof v === "boolean" ? Number(v) : Number(String(v));
@@ -29,7 +36,7 @@ function dateAdd(date: unknown, amount: unknown, unit: unknown): string | null {
 }
 
 export const HELPERS: Record<string, (...args: unknown[]) => unknown> = {
-  concat: (...args) => args.map(text).join(""),
+  concat: (...args) => capText(args.map(text).join("")),
   lower: mapText((s) => s.toLowerCase()),
   upper: mapText((s) => s.toUpperCase()),
   trim: mapText((s) => s.trim()),

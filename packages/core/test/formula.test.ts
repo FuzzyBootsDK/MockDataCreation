@@ -108,4 +108,11 @@ describe("formula limits", () => {
     const src = "(".repeat(300) + "1" + ")".repeat(300); // 601 characters
     expect(run(src)).toBe(1);
   });
+
+  test("text results longer than 65536 characters are rejected", () => {
+    const big = "x".repeat(40_000);
+    expect(() => run("a + a", { a: big })).toThrow("Text result too long");
+    expect(() => run("concat(a, a)", { a: big })).toThrow(FormulaRuntimeError);
+    expect(run("a + 'y'", { a: "x".repeat(65_535) })).toHaveLength(65_536);
+  });
 });

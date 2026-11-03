@@ -1,6 +1,6 @@
 import type { Row } from "../model.ts";
 import type { FormulaNode } from "./compile.ts";
-import { FormulaRuntimeError, HELPERS, toNumber } from "./helpers.ts";
+import { FormulaRuntimeError, HELPERS, capText, toNumber } from "./helpers.ts";
 
 export { FormulaRuntimeError } from "./helpers.ts";
 
@@ -30,7 +30,7 @@ function arithmetic(op: string, l: unknown, r: unknown): unknown {
 function binary(op: string, l: unknown, r: unknown): unknown {
   switch (op) {
     case "+":
-      if (typeof l === "string" || typeof r === "string") return (l == null ? "" : String(l)) + (r == null ? "" : String(r));
+      if (typeof l === "string" || typeof r === "string") return capText((l == null ? "" : String(l)) + (r == null ? "" : String(r)));
       return arithmetic(op, l, r);
     case "-": case "*": case "/": case "%":
       return arithmetic(op, l, r);

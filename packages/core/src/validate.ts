@@ -1,4 +1,4 @@
-import { MAX_NESTING, SchemaSchema, type Field, type Schema } from "./model.ts";
+import { MAX_ARRAY_VALUES_PER_ROW, MAX_NESTING, SchemaSchema, type Field, type Schema } from "./model.ts";
 import { getFieldType } from "./types/index.ts";
 import { isKnownLocale } from "./engine/fakers.ts";
 import { compileFormula, FormulaError } from "./formula/compile.ts";
@@ -53,7 +53,7 @@ export function validateSchema(input: unknown, others: Schema[]): { schema?: Sch
     issues.push({ path: "locale", message: `Unknown locale "${schema.locale}"` });
   }
 
-  checkFields(schema.fields, "fields", 0, { schema, set, issues });
+  checkFields(schema.fields, "fields", 0, { product: 1, total: 0 }, { schema, set, issues });
 
   // Dependents keep their references to this schema valid after an edit.
   for (const dependent of others) {
@@ -86,7 +86,14 @@ interface Ctx {
   issues: ValidationIssue[];
 }
 
-function checkFields(fields: Field[], path: string, level: number, ctx: Ctx): void {
+// Array elements produced per row along one nesting path: `product` is the count at the current depth,
+// `total` sums the counts of every array level (100 x 100 is 100 inner arrays plus 10000 values).
+interface Fan {
+  product: number;
+  total: number;
+}
+
+function checkFields(fields: Field[], path: string, level: number, fan: Fan, ctx: Ctx): void {
   const seen = new Set<string>();
   const formulas: { name: string; refs: string[]; index: number }[] = [];
 
@@ -111,6 +118,18 @@ function checkFields(fields: Field[], path: string, level: number, ctx: Ctx): vo
     }
     const options = opts.data as Record<string, unknown>;
 
+    let childFan = fan;
+    if (type.kind === "array") {
+      const product = fan.product * (options.maxItems as number);
+      childFan = { product, total: fan.total + product };
+      if (childFan.total > MAX_ARRAY_VALUES_PER_ROW && fan.total <= MAX_ARRAY_VALUES_PER_ROW) {
+        ctx.issues.push({
+          path: `${at}.options.maxItems`,
+          message: `Nested arrays could produce more than ${MAX_ARRAY_VALUES_PER_ROW} values per row; lower maxItems`,
+        });
+      }
+    }
+
     const nests = type.kind === "object" || type.kind === "array";
     if (nests) {
       if (!field.children?.length) {
@@ -118,7 +137,7 @@ function checkFields(fields: Field[], path: string, level: number, ctx: Ctx): vo
       } else if (level + 1 > MAX_NESTING) {
         ctx.issues.push({ path: `${at}.children`, message: `Nesting deeper than ${MAX_NESTING} levels is not allowed` });
       } else {
-        checkFields(field.children, `${at}.children`, level + 1, ctx);
+        checkFields(field.children, `${at}.children`, level + 1, childFan, ctx);
       }
     } else if (field.children?.length) {
       ctx.issues.push({ path: `${at}.children`, message: "Only object and array fields can have nested fields" });

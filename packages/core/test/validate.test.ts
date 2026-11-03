@@ -160,4 +160,20 @@ describe("validateSchema", () => {
     ]);
     expect(validateSchema(saved[0], others).issues).toEqual([]);
   });
+
+  describe("array fan-out budget", () => {
+    const arr = (maxItems: number, children: unknown[]) => ({ name: "a", type: "array", options: { minItems: 0, maxItems }, children });
+    const msg = "Nested arrays could produce more than 10000 values per row; lower maxItems";
+
+    test("nested arrays over the budget are rejected at the inner maxItems", () => {
+      const input = { ...base, fields: [arr(100, [arr(100, [{ name: "u", type: "uuid" }])])] };
+      const r = validateSchema(input, saved);
+      expect(r.issues).toEqual([{ path: "fields[0].children[0].options.maxItems", message: msg }]);
+    });
+
+    test("within budget is fine", () => {
+      expect(paths({ ...base, fields: [arr(100, [arr(50, [{ name: "u", type: "uuid" }])])] })).toEqual([]);
+      expect(paths({ ...base, fields: [arr(100, [{ name: "u", type: "uuid" }])] })).toEqual([]);
+    });
+  });
 });
