@@ -23,6 +23,7 @@ function dateAdd(date: unknown, amount: unknown, unit: unknown): string | null {
     case "minutes": d.setTime(d.getTime() + n * 60_000); break;
     default: throw new FormulaRuntimeError(`Unknown unit: ${String(unit)} (use years, months, days, hours, minutes)`);
   }
+  if (Number.isNaN(d.getTime())) throw new FormulaRuntimeError("Date out of range");
   const iso = d.toISOString();
   return input.length === 10 ? iso.slice(0, 10) : iso;
 }
@@ -33,7 +34,7 @@ export const HELPERS: Record<string, (...args: unknown[]) => unknown> = {
   upper: mapText((s) => s.toUpperCase()),
   trim: mapText((s) => s.trim()),
   slug: mapText((s) =>
-    s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""),
+    s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""),
   ),
   if: (cond, a, b) => (cond ? a : b),
   round: (n, digits = 0) => {

@@ -77,4 +77,35 @@ describe("evaluateFormula", () => {
     expect(() => run("dateAdd('nope', 1, 'days')")).toThrow(FormulaRuntimeError);
     expect(() => run("dateAdd('2024-01-01', 1, 'weeks')")).toThrow(FormulaRuntimeError);
   });
+
+  test("dateAdd out of range throws FormulaRuntimeError", () => {
+    expect(() => run("dateAdd('2024-01-01', 10000000000, 'years')")).toThrow(FormulaRuntimeError);
+    expect(() => run("dateAdd('2024-01-01', 10000000000, 'years')")).toThrow("Date out of range");
+  });
+
+  test("if is lazy: only the chosen branch is evaluated", () => {
+    expect(run("if(b == 0, 0, 1 / b)", { b: 0 })).toBe(0);
+    expect(run("if(b == 0, 0, 1 / b)", { b: 4 })).toBe(0.25);
+    expect(run("if(false, 1)")).toBeNull();
+  });
+
+  test("prototype names are not helpers", () => {
+    const ast = { type: "CallExpression", callee: { type: "Identifier", name: "constructor" }, arguments: [] };
+    expect(() => evaluateFormula(ast, {})).toThrow(FormulaRuntimeError);
+    expect(() => evaluateFormula(ast, {})).toThrow("Unknown function");
+  });
+});
+
+describe("formula limits", () => {
+  test("rejects formulas longer than the maximum length", () => {
+    const src = "1+".repeat(1000) + "1"; // 2001 characters
+    expect(src.length).toBe(2001);
+    expect(() => compileFormula(src)).toThrow(FormulaError);
+    expect(() => compileFormula(src)).toThrow("too long");
+  });
+
+  test("accepts moderately nested parentheses", () => {
+    const src = "(".repeat(300) + "1" + ")".repeat(300); // 601 characters
+    expect(run(src)).toBe(1);
+  });
 });

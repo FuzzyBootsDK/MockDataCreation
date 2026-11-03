@@ -18,15 +18,23 @@ export const BINARY_OPERATORS: ReadonlySet<string> = new Set([
 ]);
 export const UNARY_OPERATORS: ReadonlySet<string> = new Set(["-", "+", "!"]);
 
+export const MAX_FORMULA_LENGTH = 2000;
+
 export function compileFormula(source: string): CompiledFormula {
+  if (source.length > MAX_FORMULA_LENGTH) {
+    throw new FormulaError(`Formula is too long (max ${MAX_FORMULA_LENGTH} characters)`);
+  }
   let ast: FormulaNode;
+  const refs: string[] = [];
   try {
     ast = jsep(source) as unknown as FormulaNode;
+    check(ast, refs);
   } catch (e) {
+    // Deeply nested input exhausts the call stack in jsep or check; report it as a formula error.
+    if (e instanceof RangeError) throw new FormulaError("Formula is too deeply nested");
+    if (e instanceof FormulaError) throw e;
     throw new FormulaError((e as Error).message);
   }
-  const refs: string[] = [];
-  check(ast, refs);
   return { ast, refs };
 }
 

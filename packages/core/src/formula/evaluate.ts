@@ -66,9 +66,17 @@ export function evaluateFormula(node: FormulaNode, scope: Row): unknown {
       return binary(op, left, evaluateFormula(node.right as FormulaNode, scope));
     }
     case "CallExpression": {
-      const helper = HELPERS[(node.callee as FormulaNode).name as string];
-      if (!helper) throw new FormulaRuntimeError("Unknown function");
-      return helper(...(node.arguments as FormulaNode[]).map((a) => evaluateFormula(a, scope)));
+      const name = (node.callee as FormulaNode).name as string;
+      if (typeof name !== "string" || !Object.hasOwn(HELPERS, name)) throw new FormulaRuntimeError("Unknown function");
+      const args = node.arguments as FormulaNode[];
+      if (name === "if") {
+        // Lazy: only the chosen branch is evaluated; a missing branch yields null.
+        const [condNode, thenNode, elseNode] = args;
+        const cond = condNode ? evaluateFormula(condNode, scope) : null;
+        const chosen = cond ? thenNode : elseNode;
+        return chosen ? evaluateFormula(chosen, scope) : null;
+      }
+      return HELPERS[name](...args.map((a) => evaluateFormula(a, scope)));
     }
   }
   throw new FormulaRuntimeError(`Unsupported syntax: ${node.type}`);
