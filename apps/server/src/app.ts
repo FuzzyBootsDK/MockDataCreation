@@ -7,6 +7,7 @@ import { SchemaRepo } from "./repo/schemas.ts";
 import { connectionRoutes } from "./routes/connections.ts";
 import { docsRoutes } from "./routes/docs.ts";
 import { generateRoutes } from "./routes/generate.ts";
+import { hostGuard } from "./routes/host-guard.ts";
 import { healthRoutes } from "./routes/health.ts";
 import { mockRoutes } from "./routes/mock.ts";
 import { previewRoutes } from "./routes/preview.ts";
@@ -28,6 +29,7 @@ export async function buildApp(opts: { config: Config; db: Db; logger?: boolean 
   const app = Fastify({ logger: opts.logger ?? true });
   const ctx: AppContext = { config: opts.config, db: opts.db, schemas: new SchemaRepo(opts.db), connections: new ConnectionRepo(opts.db), seedJobs: new SeedJobs() };
   app.setErrorHandler(errorHandler);
+  hostGuard(app, opts.config);
   await docsRoutes(app);
   healthRoutes(app);
   typeRoutes(app, ctx);

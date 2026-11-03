@@ -22,7 +22,7 @@ To try seeding against local databases too:
 docker compose --profile dbs up -d
 ```
 
-Then add connections in the UI: host `postgres`, user `mockgen`, database `mockgen`, password `${PG_PASSWORD}`; or host `mssql`, user `sa`, database `master`, password `${MSSQL_PASSWORD}`, Encrypt off.
+Then add connections in the UI: host `postgres`, user `mockgen`, database `mockgen`, password `${MOCKGEN_SECRET_PG_PASSWORD}`; or host `mssql`, user `sa`, database `master`, password `${MOCKGEN_SECRET_MSSQL_PASSWORD}`, Encrypt off.
 
 For SQLite, the database file path is relative to the data directory (`DATA_DIR`); files outside it are rejected.
 
@@ -34,6 +34,14 @@ For SQLite, the database file path is relative to the data directory (`DATA_DIR`
 | `DATA_DIR` | `/data` | Where `mockgen.db` (and SQLite seed targets) live |
 | `MAX_ROWS` | `1000000` | Maximum rows per generate or seed request |
 | `MOCK_SCAN_LIMIT` | `10000` | Maximum rows scanned by mock equality filters |
+| `ALLOWED_HOSTS` | (empty) | Comma-separated extra hostnames accepted in the `Host` header (`localhost`, `127.0.0.1` and `[::1]` are always allowed) |
+
+## Security
+
+- mockgen has **no authentication**. Anyone who can reach the port can read and change schemas and connection profiles, and can seed the databases those profiles point at.
+- `docker-compose.yml` publishes ports on `127.0.0.1` only. To expose mockgen on a network, change the port bindings yourself, put it behind an authenticating proxy, and set `ALLOWED_HOSTS` to the hostnames users will type (requests with any other `Host` header get 403, which blocks DNS rebinding).
+- Connection passwords are stored in plain text in the local database and are returned by the API.
+- To keep a password out of the database, enter `${MOCKGEN_SECRET_NAME}` as the password and set that environment variable on the container. Only variables starting with `MOCKGEN_SECRET_` can be referenced.
 
 ## Field types
 

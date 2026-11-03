@@ -3,13 +3,13 @@ services:
     build: .
     image: mockgen:latest
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     volumes:
       - mockgen-data:/data
     environment:
-      # Referenced from connection profiles as ${PG_PASSWORD} / ${MSSQL_PASSWORD}.
-      PG_PASSWORD: mockgen
-      MSSQL_PASSWORD: "Mockgen!Passw0rd"
+      # Referenced from connection profiles as ${MOCKGEN_SECRET_PG_PASSWORD} / ${MOCKGEN_SECRET_MSSQL_PASSWORD}.
+      MOCKGEN_SECRET_PG_PASSWORD: mockgen
+      MOCKGEN_SECRET_MSSQL_PASSWORD: "Mockgen!Passw0rd"
 
   postgres:
     profiles: ["dbs"]
@@ -19,7 +19,7 @@ services:
       POSTGRES_PASSWORD: mockgen
       POSTGRES_DB: mockgen
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
 
   mssql:
     profiles: ["dbs"]
@@ -28,7 +28,7 @@ services:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: "Mockgen!Passw0rd"
     ports:
-      - "1433:1433"
+      - "127.0.0.1:1433:1433"
 
 volumes:
   mockgen-data:

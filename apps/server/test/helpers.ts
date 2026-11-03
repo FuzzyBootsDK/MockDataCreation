@@ -12,6 +12,7 @@ export function testConfig(over: Partial<Config> = {}): Config {
     maxRows: 1000,
     mockScanLimit: 10_000,
     webDir: null,
+    allowedHosts: [],
     ...over,
   };
 }

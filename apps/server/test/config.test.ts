@@ -17,6 +17,11 @@ describe("loadConfig", () => {
     expect(c.webDir).toBeNull(); // missing directory is ignored
   });
 
+  test("parses ALLOWED_HOSTS", () => {
+    expect(loadConfig({}).allowedHosts).toEqual([]);
+    expect(loadConfig({ ALLOWED_HOSTS: " Mockgen.LAN, ,box.example " }).allowedHosts).toEqual(["mockgen.lan", "box.example"]);
+  });
+
   test("rejects invalid numbers", () => {
     expect(() => loadConfig({ PORT: "abc" })).toThrow("PORT");
     expect(() => loadConfig({ MAX_ROWS: "0" })).toThrow("MAX_ROWS");

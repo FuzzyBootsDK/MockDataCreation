@@ -125,8 +125,8 @@ export function Connections() {
                 </>
               )}
               <p className="muted">
-                Passwords are stored in plain text in mockgen's local database. To keep one out of it, enter <code>${"{ENV_VAR}"}</code> and set
-                that environment variable on the container.
+                Passwords are stored in plain text in mockgen's local database. To keep one out of it, enter <code>${"{MOCKGEN_SECRET_NAME}"}</code> and set
+                that environment variable on the container (only names starting with <code>MOCKGEN_SECRET_</code> are allowed).
               </p>
             </>
           )}

@@ -8,6 +8,7 @@ export interface Config {
   maxRows: number;
   mockScanLimit: number;
   webDir: string | null;
+  allowedHosts: string[];
 }
 
 function positiveInt(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
@@ -27,6 +28,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     dataDir: env.DATA_DIR ? path.resolve(env.DATA_DIR) : "/data",
     maxRows: positiveInt(env, "MAX_ROWS", 1_000_000),
     mockScanLimit: positiveInt(env, "MOCK_SCAN_LIMIT", 10_000),
+    allowedHosts: (env.ALLOWED_HOSTS ?? "").split(",").map((h) => h.trim().toLowerCase()).filter(Boolean),
     webDir: fs.existsSync(path.join(webDir, "index.html")) ? webDir : null,
   };
 }

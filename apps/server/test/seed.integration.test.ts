@@ -76,7 +76,7 @@ describe.runIf(RUN)("seeding PostgreSQL", () => {
   afterAll(async () => container?.stop());
 
   test("create, append, truncate", async () => {
-    process.env.IT_PG_PASSWORD = container.getPassword();
+    process.env.MOCKGEN_SECRET_IT_PG = container.getPassword();
     const app = await makeApp({ maxRows: 5000 });
     const client = new pg.Client({
       host: container.getHost(), port: container.getPort(), database: container.getDatabase(),
@@ -88,7 +88,7 @@ describe.runIf(RUN)("seeding PostgreSQL", () => {
         app,
         {
           name: "PG", kind: "pg", host: container.getHost(), port: container.getPort(),
-          database: container.getDatabase(), user: container.getUsername(), password: "${IT_PG_PASSWORD}",
+          database: container.getDatabase(), user: container.getUsername(), password: "${MOCKGEN_SECRET_IT_PG}",
         },
         async (t) => Number((await client.query(`SELECT COUNT(*) AS n FROM "${t}"`)).rows[0].n),
       );

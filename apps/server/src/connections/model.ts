@@ -29,6 +29,9 @@ const ENV_REF = /^\$\{([A-Za-z_][A-Za-z0-9_]*)\}$/;
 export function resolveSecret(value: string, env: NodeJS.ProcessEnv): string {
   const m = ENV_REF.exec(value);
   if (!m) return value;
+  if (!m[1]!.startsWith("MOCKGEN_SECRET_")) {
+    throw new HttpError(400, "Only environment variables starting with MOCKGEN_SECRET_ can be referenced");
+  }
   const v = env[m[1]!];
   if (v === undefined) throw new HttpError(400, `Environment variable ${m[1]} is not set`);
   return v;

@@ -10,9 +10,15 @@ const sqliteConn = { name: "Local", kind: "sqlite", file: "seed-test.db" };
 describe("resolveSecret", () => {
   test("plain values pass through, ${VAR} resolves, missing var throws", () => {
     expect(resolveSecret("secret", {})).toBe("secret");
-    expect(resolveSecret("${PG_PW}", { PG_PW: "x" })).toBe("x");
-    expect(resolveSecret("pre${PG_PW}", { PG_PW: "x" })).toBe("pre${PG_PW}");
-    expect(() => resolveSecret("${NOPE}", {})).toThrow("Environment variable NOPE is not set");
+    expect(resolveSecret("${MOCKGEN_SECRET_PG_PW}", { MOCKGEN_SECRET_PG_PW: "x" })).toBe("x");
+    expect(resolveSecret("pre${MOCKGEN_SECRET_PG_PW}", { MOCKGEN_SECRET_PG_PW: "x" })).toBe("pre${MOCKGEN_SECRET_PG_PW}");
+    expect(() => resolveSecret("${MOCKGEN_SECRET_NOPE}", {})).toThrow("Environment variable MOCKGEN_SECRET_NOPE is not set");
+  });
+
+  test("only MOCKGEN_SECRET_* variables can be referenced", () => {
+    expect(() => resolveSecret("${PATH}", { PATH: "/bin" })).toThrow(
+      "Only environment variables starting with MOCKGEN_SECRET_ can be referenced",
+    );
   });
 });
 
