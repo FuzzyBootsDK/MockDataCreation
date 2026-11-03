@@ -5,6 +5,11 @@ function cell(v: unknown) {
   return typeof v === "object" ? JSON.stringify(v) : String(v);
 }
 
+function text(v: unknown): string {
+  if (v === null || v === undefined) return "null";
+  return typeof v === "object" ? JSON.stringify(v) : String(v);
+}
+
 export function Preview({ rows, warnings, error, loading }: PreviewState) {
   const cols = rows.length ? Object.keys(rows[0]!) : [];
   return (
@@ -21,7 +26,7 @@ export function Preview({ rows, warnings, error, loading }: PreviewState) {
           </thead>
           <tbody>
             {rows.map((r, i) => (
-              <tr key={i}>{cols.map((c) => <td key={c} title={String(cell(r[c]))}>{cell(r[c])}</td>)}</tr>
+              <tr key={i}>{cols.map((c) => <td key={c} title={text(r[c])}>{cell(r[c])}</td>)}</tr>
             ))}
           </tbody>
         </table>

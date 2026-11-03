@@ -63,6 +63,7 @@ export function SchemaEditor({ id, types }: { id: string | null; types: TypesInf
   const dirty = !saved || JSON.stringify(saved) !== JSON.stringify(draft);
   const update = (patch: Partial<Draft>) => {
     setDraft({ ...draft, ...patch });
+    setSaveIssues([]);
     setMessage(null);
   };
 
@@ -128,6 +129,7 @@ export function SchemaEditor({ id, types }: { id: string | null; types: TypesInf
                 <select value={draft.locale} onChange={(e) => update({ locale: e.target.value })}>
                   {types.locales.map((l) => <option key={l} value={l}>{l}</option>)}
                 </select>
+                {issue("locale") && <small className="error">{issue("locale")}</small>}
               </label>
               <label>
                 Default rows

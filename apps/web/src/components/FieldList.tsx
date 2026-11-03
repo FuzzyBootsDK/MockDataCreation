@@ -32,7 +32,7 @@ export function FieldList({ parentPath, ctx }: { parentPath: FieldPath; ctx: Edi
               setDragFrom(null);
             }}
           >
-            <FieldRow field={field} path={path} ctx={ctx} onDragStart={() => setDragFrom(i)} />
+            <FieldRow field={field} path={path} ctx={ctx} onDragStart={() => setDragFrom(i)} onDragEnd={() => setDragFrom(null)} />
             {(kind === "object" || kind === "array") && <FieldList parentPath={path} ctx={ctx} />}
           </div>
         );

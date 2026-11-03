@@ -40,7 +40,11 @@ export function SchemaList() {
     <div>
       <div className="toolbar">
         <h1>Schemas</h1>
-        <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => e.target.files?.[0] && importFile(e.target.files[0])} />
+        <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = "";
+            if (f) importFile(f);
+          }} />
         <button type="button" onClick={() => fileRef.current?.click()}>Import JSON</button>
         <a className="button primary" href="#/schemas/new" role="link">New schema</a>
       </div>

@@ -4,11 +4,12 @@ import type { EditorCtx } from "./FieldList.tsx";
 import { OptionsEditor } from "./OptionsEditor.tsx";
 import { TypePicker } from "./TypePicker.tsx";
 
-export function FieldRow({ field, path, ctx, onDragStart }: {
+export function FieldRow({ field, path, ctx, onDragStart, onDragEnd }: {
   field: Field;
   path: FieldPath;
   ctx: EditorCtx;
   onDragStart: () => void;
+  onDragEnd: () => void;
 }) {
   const errors = issuesAt(ctx.issues, path);
   const type = ctx.typeByKey.get(field.type);
@@ -31,6 +32,7 @@ export function FieldRow({ field, path, ctx, onDragStart }: {
           e.dataTransfer.setData("text/plain", field.name);
           onDragStart();
         }}
+        onDragEnd={onDragEnd}
       >
         ⠿
       </span>
