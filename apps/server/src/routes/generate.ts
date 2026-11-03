@@ -5,6 +5,7 @@ import { DIALECTS, DataGenerator, FORMATS, FORMAT_MIME, formatRows, type Dialect
 import type { AppContext } from "../app.ts";
 import { HttpError } from "../errors.ts";
 import { resolveExport, type ExportItem } from "../export-plan.ts";
+import { validateDraft } from "./preview.ts";
 import { requireSchema } from "./schemas.ts";
 
 export function parseFormat(v: unknown): Format {
@@ -87,6 +88,22 @@ export function generateRoutes(app: FastifyInstance, ctx: AppContext) {
       return attachment(reply, FORMAT_MIME[format], `${schema.slug}.${format}`).send(stream(chunks, gen, app, schema.slug));
     },
   );
+
+  app.post<{
+    Body: { schema?: Record<string, unknown>; format?: string; dialect?: string; count?: number; seed?: number; ddl?: boolean };
+  }>("/api/generate/draft", async (req, reply) => {
+    const body = req.body ?? {};
+    const all = ctx.schemas.all();
+    const schema = validateDraft(body.schema ?? {}, all);
+    const format = parseFormat(body.format);
+    const dialect = parseDialect(body.dialect);
+    const count = parseCount(body.count, schema.defaultCount, ctx.config.maxRows);
+    const seed = parseSeed(body.seed, schema.seed);
+    const set = [...all.filter((s) => s.id !== schema.id), schema];
+    const gen = new DataGenerator(set);
+    const chunks = formatRows(format, schema, set, gen.rows(schema.id, count, seed), { dialect, ddl: truthy(body.ddl) });
+    return attachment(reply, FORMAT_MIME[format], `${schema.slug}.${format}`).send(stream(chunks, gen, app, schema.slug));
+  });
 
   app.post<{
     Body: { schemaIds?: string[]; counts?: Record<string, number>; format?: string; dialect?: string; seed?: number; ddl?: boolean };

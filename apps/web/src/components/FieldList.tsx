@@ -37,8 +37,8 @@ export function FieldList({ parentPath, ctx }: { parentPath: FieldPath; ctx: Edi
           </div>
         );
       })}
-      <button type="button" className="link" onClick={() => ctx.setFields(appendTo(ctx.root, parentPath, newField(list)))}>
-        + Add {parentPath.length ? "nested field" : "field"}
+      <button type="button" className="add-field" onClick={() => ctx.setFields(appendTo(ctx.root, parentPath, newField(list)))}>
+        + Add {parentPath.length ? "nested field" : "another field"}
       </button>
     </div>
   );

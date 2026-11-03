@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import type { Field, Schema, ValidationIssue } from "@mockgen/core";
-import { ApiError, api, formatError, type NewSchema, type TypesInfo } from "../api.ts";
+import type { Dialect, Field, Format, Schema, ValidationIssue } from "@mockgen/core";
+import { ApiError, api, downloadDraft, formatError, type NewSchema, type TypesInfo } from "../api.ts";
 import { navigate } from "../App.tsx";
 import { slugify } from "../fieldTree.ts";
 import { usePreview } from "../usePreview.ts";
@@ -12,12 +12,14 @@ import { SeedDialog } from "./SeedDialog.tsx";
 
 type Draft = NewSchema & { id: string; fields: Field[] };
 
+const DIALECT_LABELS: Record<Dialect, string> = { pg: "PostgreSQL", mssql: "SQL Server", sqlite: "SQLite" };
+
 const emptyDraft = (): Draft => ({
   id: crypto.randomUUID(),
   name: "",
   slug: "",
   locale: "en",
-  defaultCount: 100,
+  defaultCount: 1000,
   seed: 1,
   mockEnabled: false,
   fields: [
@@ -30,6 +32,8 @@ const emptyDraft = (): Draft => ({
       options: { expression: 'lower(first_name) + "." + lower(last_name) + "@example.com"' },
       blankPercent: 0,
     },
+    { name: "gender", type: "person.sex", options: {}, blankPercent: 0 },
+    { name: "ip_address", type: "internet.ipv4", options: {}, blankPercent: 0 },
   ],
 });
 
@@ -41,6 +45,10 @@ export function SchemaEditor({ id, types }: { id: string | null; types: TypesInf
   const [message, setMessage] = useState<string | null>(null);
   const [slugTouched, setSlugTouched] = useState(id !== null);
   const [dialog, setDialog] = useState<null | "download" | "seed">(null);
+  const [format, setFormat] = useState<Format>("csv");
+  const [dialect, setDialect] = useState<Dialect>("pg");
+  const [ddl, setDdl] = useState(true);
+  const [generating, setGenerating] = useState(false);
   const preview = usePreview(draft);
 
   useEffect(() => {
@@ -97,6 +105,24 @@ export function SchemaEditor({ id, types }: { id: string | null; types: TypesInf
     }
   };
 
+  const generate = async () => {
+    const count = draft.defaultCount;
+    if (count === undefined || !Number.isInteger(count) || count < 1 || count > types.maxRows) {
+      setMessage(`Rows must be a whole number between 1 and ${types.maxRows}`);
+      return;
+    }
+    setMessage(null);
+    setGenerating(true);
+    try {
+      await downloadDraft({ schema: draft, format, dialect, ddl });
+    } catch (e) {
+      if (e instanceof ApiError) setSaveIssues(e.issues);
+      setMessage(formatError(e));
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const toggleMock = async (enabled: boolean) => {
     if (!saved) return;
     try {
@@ -111,76 +137,126 @@ export function SchemaEditor({ id, types }: { id: string | null; types: TypesInf
   const all = saved ? [...others, saved] : others;
 
   return (
-    <div>
+    <div className="editor">
       <div className="toolbar">
         <h1>{draft.name || "New schema"}</h1>
         {message && <span className={message === "Saved" ? "muted" : "error"}>{message}</span>}
         <a href="#/">Back</a>
-        <button type="button" className="primary" onClick={save} disabled={!dirty}>
+        <button type="button" onClick={save} disabled={!dirty}>
           Save
         </button>
       </div>
-      <div className="editor">
-        <div>
-          <section className="panel">
-            <div className="schema-settings">
-              <label>
-                Name
-                <input
-                  value={draft.name}
-                  onChange={(e) => update({ name: e.target.value, ...(slugTouched ? {} : { slug: slugify(e.target.value) }) })}
-                />
-                {issue("name") && <small className="error">{issue("name")}</small>}
-              </label>
-              <label>
-                Slug
-                <input
-                  value={draft.slug}
-                  onChange={(e) => {
-                    setSlugTouched(true);
-                    update({ slug: e.target.value });
-                  }}
-                />
-                {issue("slug") && <small className="error">{issue("slug")}</small>}
-              </label>
-              <label>
-                Locale
-                <select value={draft.locale} onChange={(e) => update({ locale: e.target.value })}>
-                  {types.locales.map((l) => <option key={l} value={l}>{l}</option>)}
-                </select>
-                {issue("locale") && <small className="error">{issue("locale")}</small>}
-              </label>
-              <label>
-                Default rows
-                <input type="number" min={1} value={draft.defaultCount} onChange={(e) => update({ defaultCount: Number(e.target.value) })} />
-                {issue("defaultCount") && <small className="error">{issue("defaultCount")}</small>}
-              </label>
-              <label>
-                Seed
-                <input type="number" min={0} value={draft.seed} onChange={(e) => update({ seed: Number(e.target.value) })} />
-                {issue("seed") && <small className="error">{issue("seed")}</small>}
-              </label>
-            </div>
-            {schemaIssues.map((i) => <p key={i.path + i.message} className="error">{i.message}</p>)}
-          </section>
-          <section className="panel">
-            <h3>Fields</h3>
-            <FieldList parentPath={[]} ctx={ctx} />
-          </section>
-          <Preview {...preview} />
+
+      <section className="panel">
+        <div className="field-head" aria-hidden>
+          <span />
+          <span>Field Name</span>
+          <span>Type</span>
+          <span>Options</span>
+          <span />
+          <span />
         </div>
-        <aside>
+        <FieldList parentPath={[]} ctx={ctx} />
+        {schemaIssues.map((i) => <p key={i.path + i.message} className="error">{i.message}</p>)}
+      </section>
+
+      <section className="panel generate-bar">
+        <label>
+          # Rows
+          <input
+            type="number"
+            min={1}
+            max={types.maxRows}
+            value={draft.defaultCount}
+            onChange={(e) => update({ defaultCount: Number(e.target.value) })}
+          />
+          {issue("defaultCount") && <small className="error">{issue("defaultCount")}</small>}
+        </label>
+        <label>
+          Format
+          <select value={format} onChange={(e) => setFormat(e.target.value as Format)}>
+            {types.formats.map((f) => <option key={f} value={f}>{f.toUpperCase()}</option>)}
+          </select>
+        </label>
+        {format === "sql" && (
+          <>
+            <label>
+              Dialect
+              <select value={dialect} onChange={(e) => setDialect(e.target.value as Dialect)}>
+                {types.dialects.map((d) => <option key={d} value={d}>{DIALECT_LABELS[d]}</option>)}
+              </select>
+            </label>
+            <label className="check">
+              <input type="checkbox" checked={ddl} onChange={(e) => setDdl(e.target.checked)} /> Include CREATE TABLE
+            </label>
+          </>
+        )}
+        <div className="generate-actions">
+          <button type="button" className="primary big" onClick={generate} disabled={generating}>
+            {generating ? "Generating…" : "Generate Data"}
+          </button>
+          {saved && (
+            <button type="button" disabled={dirty} title={dirty ? "Save first" : undefined} onClick={() => setDialog("download")}>
+              More export options…
+            </button>
+          )}
+        </div>
+      </section>
+
+      <Preview {...preview} />
+
+      <section className="panel">
+        <h3>Schema</h3>
+        <div className="schema-settings">
+          <label>
+            Name
+            <input
+              value={draft.name}
+              placeholder="Untitled"
+              onChange={(e) => update({ name: e.target.value, ...(slugTouched ? {} : { slug: slugify(e.target.value) }) })}
+            />
+            {issue("name") && <small className="error">{issue("name")}</small>}
+          </label>
+          <label>
+            Slug
+            <input
+              value={draft.slug}
+              placeholder="mock-data"
+              onChange={(e) => {
+                setSlugTouched(true);
+                update({ slug: e.target.value });
+              }}
+            />
+            {issue("slug") && <small className="error">{issue("slug")}</small>}
+          </label>
+          <label>
+            Locale
+            <select value={draft.locale} onChange={(e) => update({ locale: e.target.value })}>
+              {types.locales.map((l) => <option key={l} value={l}>{l}</option>)}
+            </select>
+            {issue("locale") && <small className="error">{issue("locale")}</small>}
+          </label>
+          <label>
+            Seed
+            <input type="number" min={0} value={draft.seed} onChange={(e) => update({ seed: Number(e.target.value) })} />
+            {issue("seed") && <small className="error">{issue("seed")}</small>}
+          </label>
+        </div>
+        <p className="muted">Save the schema to reuse it, seed a database or serve it as a mock API.</p>
+      </section>
+
+      {saved && (
+        <div className="extras">
           <section className="panel stack">
-            <h3>Export</h3>
-            {dirty && <p className="muted">Save the schema to download, seed or serve it.</p>}
-            <button type="button" disabled={dirty} onClick={() => setDialog("download")}>Download…</button>
+            <h3>Seed a database</h3>
+            <p className="muted">Insert rows straight into PostgreSQL, SQL Server or SQLite.</p>
             <button type="button" disabled={dirty} onClick={() => setDialog("seed")}>Seed database…</button>
           </section>
-          {saved && <MockPanel schema={saved} onToggle={toggleMock} />}
-        </aside>
-        {saved && dialog === "download" && <DownloadDialog schema={saved} all={all} types={types} onClose={() => setDialog(null)} />}
-        {saved && dialog === "seed" && <SeedDialog schema={saved} all={all} onClose={() => setDialog(null)} />}
-      </div>
+          <MockPanel schema={saved} onToggle={toggleMock} />
+        </div>
+      )}
+      {saved && dialog === "download" && <DownloadDialog schema={saved} all={all} types={types} onClose={() => setDialog(null)} />}
+      {saved && dialog === "seed" && <SeedDialog schema={saved} all={all} onClose={() => setDialog(null)} />}
     </div>
   );
 }

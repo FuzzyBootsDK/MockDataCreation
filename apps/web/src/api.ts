@@ -109,15 +109,24 @@ export function saveBlob(blob: Blob, filename: string): void {
 }
 
 export async function downloadMulti(body: { schemaIds: string[]; counts?: Record<string, number> } & GenerateParams): Promise<void> {
-  const res = await fetch("/api/generate", {
+  await download("/api/generate", body);
+}
+
+/** Generates a file from the editor's current (possibly unsaved) schema. */
+export async function downloadDraft(body: { schema: unknown } & GenerateParams): Promise<void> {
+  await download("/api/generate/draft", body);
+}
+
+async function download(url: string, body: unknown): Promise<void> {
+  const res = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    const data = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new ApiError(res.status, data.error ?? res.statusText);
+    const data = (await res.json().catch(() => ({}))) as { error?: string; errors?: ValidationIssue[] };
+    throw new ApiError(res.status, data.error ?? (data.errors ? "Please fix the highlighted fields" : res.statusText), data.errors ?? []);
   }
-  const name = /filename="([^"]+)"/.exec(res.headers.get("content-disposition") ?? "")?.[1] ?? "mockgen";
+  const name =/filename="([^"]+)"/.exec(res.headers.get("content-disposition") ?? "")?.[1] ?? "mockgen";
   saveBlob(await res.blob(), name);
 }

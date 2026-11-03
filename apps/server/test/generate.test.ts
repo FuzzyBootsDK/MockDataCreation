@@ -170,3 +170,28 @@ describe("zipEntries teardown", () => {
     expect(ended).toBe(true);
   });
 });
+
+describe("POST /api/generate/draft", () => {
+  test("downloads an unsaved, unnamed schema", async () => {
+    const app = await makeApp();
+    const r = await app.inject({
+      method: "POST",
+      url: "/api/generate/draft",
+      payload: { schema: { ...customersInput, name: "", slug: "" }, format: "csv", count: 3 },
+    });
+    expect(r.statusCode).toBe(200);
+    expect(r.headers["content-disposition"]).toBe('attachment; filename="mock-data.csv"');
+    expect(r.body.trimEnd().split("\r\n")).toHaveLength(4);
+  });
+
+  test("placeholder slug avoids saved slugs; invalid drafts and counts are 400", async () => {
+    const app = await makeApp({ maxRows: 10 });
+    await createSchema(app, { ...customersInput, name: "Taken", slug: "mock-data" });
+    const ok = await app.inject({ method: "POST", url: "/api/generate/draft", payload: { schema: { ...customersInput, slug: "" } } });
+    expect(ok.headers["content-disposition"]).toBe('attachment; filename="mock-data-2.json"');
+    const bad = await app.inject({ method: "POST", url: "/api/generate/draft", payload: { schema: { ...customersInput, fields: [] } } });
+    expect(bad.statusCode).toBe(400);
+    const tooMany = await app.inject({ method: "POST", url: "/api/generate/draft", payload: { schema: customersInput, count: 11 } });
+    expect(tooMany.statusCode).toBe(400);
+  });
+});

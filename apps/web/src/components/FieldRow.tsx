@@ -51,6 +51,7 @@ export function FieldRow({ field, path, ctx, onDragStart, onDragEnd }: {
         {errors.children && <small className="error">{errors.children}</small>}
       </div>
       <label className="blank">
+        blank:
         <input
           aria-label="Blank %"
           type="number"
@@ -59,7 +60,7 @@ export function FieldRow({ field, path, ctx, onDragStart, onDragEnd }: {
           value={field.blankPercent}
           onChange={(e) => set({ blankPercent: Number(e.target.value) })}
         />
-        % blank
+        %
         {errors.blankPercent && <small className="error">{errors.blankPercent}</small>}
       </label>
       <button type="button" className="icon" aria-label="Remove field" onClick={() => ctx.setFields(removeAt(ctx.root, path))}>

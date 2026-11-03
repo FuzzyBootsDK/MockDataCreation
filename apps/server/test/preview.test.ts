@@ -59,3 +59,19 @@ describe("POST /api/preview", () => {
     expect(warn.json().warnings).toBe(3);
   });
 });
+
+describe("unnamed drafts", () => {
+  test("preview works before the schema has a name or slug", async () => {
+    const app = await makeApp();
+    const r = await app.inject({ method: "POST", url: "/api/preview", payload: { schema: { ...customersInput, name: "", slug: "" } } });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().rows).toHaveLength(5);
+  });
+
+  test("a slug that is filled in is still validated", async () => {
+    const app = await makeApp();
+    const r = await app.inject({ method: "POST", url: "/api/preview", payload: { schema: { ...customersInput, slug: "Bad Slug" } } });
+    expect(r.statusCode).toBe(400);
+    expect(r.json().errors[0].path).toBe("slug");
+  });
+});
