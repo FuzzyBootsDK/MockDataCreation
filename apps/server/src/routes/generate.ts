@@ -52,18 +52,19 @@ function stream(chunks: Iterable<string>, gen: DataGenerator, app: FastifyInstan
 /** Zip of one entry per generator; entry errors fail the zip, and closing the zip tears down unfinished entries. */
 export function zipEntries(entries: { name: string; chunks: Iterable<string> }[], onEnd: () => void): Readable {
   const zip = new yazl.ZipFile();
+  const outStream = zip.outputStream as Readable;
   const sources = entries.map((e) => {
     const src = Readable.from(e.chunks);
-    src.on("error", (err) => zip.outputStream.destroy(err));
+    src.on("error", (err) => outStream.destroy(err));
     zip.addReadStream(src, e.name);
     return src;
   });
-  zip.outputStream.on("end", onEnd);
-  zip.outputStream.on("close", () => {
+  outStream.on("end", onEnd);
+  outStream.on("close", () => {
     for (const src of sources) if (!src.readableEnded && !src.destroyed) src.destroy();
   });
   zip.end();
-  return zip.outputStream;
+  return outStream;
 }
 
 function* concat(parts: Iterable<string>[]): Generator<string> {

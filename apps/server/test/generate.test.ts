@@ -1,5 +1,4 @@
 import AdmZip from "adm-zip";
-import { Readable } from "node:stream";
 import { describe, expect, test } from "vitest";
 import { zipEntries } from "../src/routes/generate.ts";
 import { createSchema, customersInput, makeApp, ordersInput } from "./helpers.ts";
@@ -165,7 +164,7 @@ describe("zipEntries teardown", () => {
 
   test("onEnd fires after a successful zip", async () => {
     let ended = false;
-    const out = zipEntries([{ name: "x.txt", chunks: Readable.from(["hi"]) }], () => (ended = true));
+    const out = zipEntries([{ name: "x.txt", chunks: ["hi"] }], () => (ended = true));
     out.resume();
     await new Promise((r) => out.on("end", r));
     expect(ended).toBe(true);
