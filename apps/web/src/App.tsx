@@ -1,11 +1,19 @@
 import { useEffect, useState } from "react";
 import { api, formatError, type TypesInfo } from "./api.ts";
+import { SchemaEditor } from "./components/SchemaEditor.tsx";
+import { SchemaList } from "./components/SchemaList.tsx";
 
 type Route = { page: "list" } | { page: "edit"; id: string | null } | { page: "connections" };
 
 function parseRoute(hash: string): Route {
   const m = /^#\/schemas\/([^/]+)$/.exec(hash);
-  if (m) return { page: "edit", id: m[1] === "new" ? null : decodeURIComponent(m[1]!) };
+  if (m) {
+    try {
+      return { page: "edit", id: m[1] === "new" ? null : decodeURIComponent(m[1]!) };
+    } catch {
+      return { page: "list" };
+    }
+  }
   if (hash === "#/connections") return { page: "connections" };
   return { page: "list" };
 }
@@ -45,7 +53,13 @@ export function App() {
         ) : !types ? (
           <p className="muted">Loading…</p>
         ) : (
-          <p className="muted">Page: {route.page}</p>
+          route.page === "edit" ? (
+            <SchemaEditor key={route.id ?? "new"} id={route.id} types={types} />
+          ) : route.page === "connections" ? (
+            <p className="muted">Connections</p>
+          ) : (
+            <SchemaList />
+          )
         )}
       </main>
     </div>
