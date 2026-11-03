@@ -4,6 +4,8 @@ import type { Db } from "./db.ts";
 import { errorHandler } from "./errors.ts";
 import { SchemaRepo } from "./repo/schemas.ts";
 import { healthRoutes } from "./routes/health.ts";
+import { generateRoutes } from "./routes/generate.ts";
+import { previewRoutes } from "./routes/preview.ts";
 import { schemaRoutes } from "./routes/schemas.ts";
 import { typeRoutes } from "./routes/types.ts";
 
@@ -20,5 +22,7 @@ export async function buildApp(opts: { config: Config; db: Db; logger?: boolean 
   healthRoutes(app);
   typeRoutes(app);
   schemaRoutes(app, ctx);
+  previewRoutes(app, ctx);
+  generateRoutes(app, ctx);
   return app;
 }
