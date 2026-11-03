@@ -5,7 +5,10 @@ import { navigate } from "../App.tsx";
 import { slugify } from "../fieldTree.ts";
 import { usePreview } from "../usePreview.ts";
 import { FieldList, type EditorCtx } from "./FieldList.tsx";
+import { DownloadDialog } from "./DownloadDialog.tsx";
+import { MockPanel } from "./MockPanel.tsx";
 import { Preview } from "./Preview.tsx";
+import { SeedDialog } from "./SeedDialog.tsx";
 
 type Draft = NewSchema & { id?: string; fields: Field[] };
 
@@ -36,6 +39,7 @@ export function SchemaEditor({ id, types }: { id: string | null; types: TypesInf
   const [saveIssues, setSaveIssues] = useState<ValidationIssue[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [slugTouched, setSlugTouched] = useState(id !== null);
+  const [dialog, setDialog] = useState<null | "download" | "seed">(null);
   const preview = usePreview(draft);
 
   useEffect(() => {
@@ -90,6 +94,19 @@ export function SchemaEditor({ id, types }: { id: string | null; types: TypesInf
       setMessage(formatError(e));
     }
   };
+
+  const toggleMock = async (enabled: boolean) => {
+    if (!saved) return;
+    try {
+      const { id: savedId, ...body } = saved;
+      const s = await api.updateSchema(savedId, { ...body, mockEnabled: enabled });
+      setSaved(s);
+      setDraft({ ...draft, mockEnabled: s.mockEnabled });
+    } catch (e) {
+      setMessage(formatError(e));
+    }
+  };
+  const all = saved ? [...others, saved] : others;
 
   return (
     <div>
@@ -154,11 +171,13 @@ export function SchemaEditor({ id, types }: { id: string | null; types: TypesInf
           <section className="panel stack">
             <h3>Export</h3>
             {dirty && <p className="muted">Save the schema to download, seed or serve it.</p>}
-            <button type="button" disabled>Download…</button>
-            <button type="button" disabled>Seed database…</button>
+            <button type="button" disabled={dirty} onClick={() => setDialog("download")}>Download…</button>
+            <button type="button" disabled={dirty} onClick={() => setDialog("seed")}>Seed database…</button>
           </section>
-          {/* MockPanel: Task 3 */}
+          {saved && <MockPanel schema={saved} onToggle={toggleMock} />}
         </aside>
+        {saved && dialog === "download" && <DownloadDialog schema={saved} all={all} types={types} onClose={() => setDialog(null)} />}
+        {saved && dialog === "seed" && <SeedDialog schema={saved} all={all} onClose={() => setDialog(null)} />}
       </div>
     </div>
   );

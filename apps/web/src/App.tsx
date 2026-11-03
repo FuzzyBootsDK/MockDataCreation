@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, formatError, type TypesInfo } from "./api.ts";
+import { Connections } from "./components/Connections.tsx";
 import { SchemaEditor } from "./components/SchemaEditor.tsx";
 import { SchemaList } from "./components/SchemaList.tsx";
 
@@ -56,7 +57,7 @@ export function App() {
           route.page === "edit" ? (
             <SchemaEditor key={route.id ?? "new"} id={route.id} types={types} />
           ) : route.page === "connections" ? (
-            <p className="muted">Connections</p>
+            <Connections />
           ) : (
             <SchemaList />
           )
