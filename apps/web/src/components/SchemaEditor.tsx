@@ -26,12 +26,7 @@ const emptyDraft = (): Draft => ({
     { name: "id", type: "rowNumber", options: {}, blankPercent: 0 },
     { name: "first_name", type: "person.firstName", options: {}, blankPercent: 0 },
     { name: "last_name", type: "person.lastName", options: {}, blankPercent: 0 },
-    {
-      name: "email",
-      type: "formula",
-      options: { expression: 'lower(first_name) + "." + lower(last_name) + "@example.com"' },
-      blankPercent: 0,
-    },
+    { name: "email", type: "internet.email", options: {}, blankPercent: 0 },
     { name: "gender", type: "person.sex", options: {}, blankPercent: 0 },
     { name: "ip_address", type: "internet.ipv4", options: {}, blankPercent: 0 },
   ],

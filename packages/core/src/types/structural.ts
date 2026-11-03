@@ -29,7 +29,7 @@ export const structuralTypes: FieldType[] = [
   defineType({
     key: "rowNumber",
     category: "Basic",
-    label: "Row number",
+    label: "Row Number",
     options: z.object({ start: z.number().int().default(1) }),
     column: "bigint",
     generate: (o, ctx) => o.start + ctx.rowIndex,
@@ -73,7 +73,7 @@ export const structuralTypes: FieldType[] = [
   defineType({
     key: "customList",
     category: "Basic",
-    label: "Custom list",
+    label: "Custom List",
     options: z.object({
       values: z
         .array(z.object({ value: z.string(), weight: z.number().positive().default(1) }))
@@ -85,7 +85,7 @@ export const structuralTypes: FieldType[] = [
   defineType({
     key: "regex",
     category: "Basic",
-    label: "Regular expression",
+    label: "Regular Expression",
     options: z.object({ pattern: validRegex }),
     column: "text",
     generate: (o, ctx) => ctx.faker.helpers.fromRegExp(o.pattern),
@@ -104,7 +104,7 @@ export const structuralTypes: FieldType[] = [
   defineType({
     key: "reference",
     category: "Advanced",
-    label: "Reference to another schema",
+    label: "Reference (another schema)",
     kind: "reference",
     options: z.object({
       schemaId: z.string().min(1, "Choose a schema"),
@@ -116,14 +116,14 @@ export const structuralTypes: FieldType[] = [
   defineType({
     key: "object",
     category: "Advanced",
-    label: "Object (nested fields)",
+    label: "JSON Object (nested fields)",
     kind: "object",
     column: "json",
   }),
   defineType({
     key: "array",
     category: "Advanced",
-    label: "Array (repeated nested fields)",
+    label: "JSON Array (repeated nested fields)",
     kind: "array",
     options: z
       .object({

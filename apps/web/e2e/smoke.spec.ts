@@ -9,7 +9,7 @@ test("create a schema, preview it, download CSV and serve it as a mock", async (
 
   const rows = page.locator("section.preview tbody tr");
   await expect(rows).toHaveCount(10);
-  await expect(page.locator("section.preview")).toContainText("@example.com");
+  await expect(page.locator("section.preview")).toContainText("@");
 
   // Generating works before the schema is saved, like Mockaroo.
   const downloadPromise = page.waitForEvent("download");

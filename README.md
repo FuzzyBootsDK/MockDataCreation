@@ -45,9 +45,10 @@ For SQLite, the database file path is relative to the data directory (`DATA_DIR`
 
 ## Field types
 
-About 120 types: faker-backed types (names, emails, addresses, finance, commerce, vehicles, dates and more) in the schema's locale, plus:
+About 225 types, modelled on Mockaroo's list and generated in the schema's locale: personal (names, email address, username, SSN, job title), location, travel (airports, airlines, seats), company, commerce, finance, crypto, IT (IPs and CIDRs, hashes, JWT, MongoDB ObjectID, ULID, app name/version/bundle ID), color, car, nature, food, entertainment, text and dates. Plus:
 
-- **Row number**, **UUID**, **Number** (range, decimals), **Boolean** (true %), **Custom list** (weighted values), **Regular expression**
+- **Row Number**, **UUID**, **Number** (range, decimals), **Boolean** (true %), **Custom List** (weighted values), **Regular Expression**
+- **Character Sequence**: a pattern where `#` is a digit, `?` a letter and `*` either (e.g. `INV-#####`); **Time** (24h or 12h)
 - **Formula**: computed from sibling fields
 - **Reference**: picks a value from another schema's rows (foreign keys)
 - **Object** and **Array**: nested JSON (flattened to `parent_child` columns in CSV/SQL; arrays become JSON text)

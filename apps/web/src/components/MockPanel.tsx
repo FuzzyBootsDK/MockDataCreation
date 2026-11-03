@@ -21,7 +21,7 @@ export function MockPanel({ schema, onToggle }: { schema: Schema; onToggle: (ena
           <p className="muted">
             Data is stable for the schema's seed. Writes return realistic responses but are not stored.
           </p>
-          {!hasId && <p className="muted">Add a top-level <code>id</code> field of type Row number to enable <code>/{"{id}"}</code> requests.</p>}
+          {!hasId && <p className="muted">Add a top-level <code>id</code> field of type Row Number to enable <code>/{"{id}"}</code> requests.</p>}
         </>
       )}
     </section>
