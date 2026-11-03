@@ -8,5 +8,3 @@ allowBuilds:
   cpu-features: false
   protobufjs: false
   ssh2: false
-minimumReleaseAgeExclude:
-  - fastify@5.12.8

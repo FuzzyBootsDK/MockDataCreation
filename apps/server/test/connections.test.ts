@@ -70,4 +70,28 @@ describe("/api/connections", () => {
     const t = await app.inject({ method: "POST", url: `/api/connections/${c.json().id}/test` });
     expect(t.json()).toEqual({ ok: false, error: "Cannot seed into mockgen's own database" });
   });
+
+  test("sqlite files must stay inside the data directory", async () => {
+    const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "mockgen-conn-"));
+    const app = await makeApp({ dataDir });
+    const run = async (file: string) => {
+      const c = await app.inject({ method: "POST", url: "/api/connections", payload: { ...sqliteConn, file } });
+      return (await app.inject({ method: "POST", url: `/api/connections/${c.json().id}/test` })).json();
+    };
+    const msg = { ok: false, error: "SQLite file must be inside the data directory" };
+    expect(await run("../escape.db")).toEqual(msg);
+    expect(await run(path.join(os.tmpdir(), "x.db"))).toEqual(msg);
+    expect(await run("sub/dir/ok.db")).toEqual({ ok: true });
+    expect(fs.existsSync(path.join(dataDir, "sub", "dir", "ok.db"))).toBe(true);
+  });
+
+  test("refuses mockgen.db case variants and sidecar files", async () => {
+    const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "mockgen-conn-"));
+    const app = await makeApp({ dataDir });
+    for (const file of ["MockGen.DB", "mockgen.db-wal"]) {
+      const c = await app.inject({ method: "POST", url: "/api/connections", payload: { ...sqliteConn, file } });
+      const t = await app.inject({ method: "POST", url: `/api/connections/${c.json().id}/test` });
+      expect(t.json()).toEqual({ ok: false, error: "Cannot seed into mockgen's own database" });
+    }
+  });
 });

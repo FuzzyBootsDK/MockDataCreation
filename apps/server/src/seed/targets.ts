@@ -31,8 +31,10 @@ export async function openTarget(
 }
 
 function openSqlite(file: string, dataDir: string): SeedTarget {
-  const resolved = path.resolve(dataDir, file);
-  if (resolved === path.resolve(dataDir, "mockgen.db")) throw new HttpError(400, "Cannot seed into mockgen's own database");
+  const root = path.resolve(dataDir);
+  const resolved = path.resolve(root, file);
+  if (!resolved.startsWith(root + path.sep)) throw new HttpError(400, "SQLite file must be inside the data directory");
+  if (path.basename(resolved).toLowerCase().startsWith("mockgen.db")) throw new HttpError(400, "Cannot seed into mockgen's own database");
   fs.mkdirSync(path.dirname(resolved), { recursive: true });
   const db = new Database(resolved);
   return {
@@ -55,19 +57,27 @@ async function openPg(conn: Extract<Connection, { kind: "pg" }>, password: strin
     ssl: conn.ssl ? { rejectUnauthorized: false } : false,
     connectionTimeoutMillis: 10_000,
   });
+  let lost: Error | null = null;
+  client.on("error", (e) => {
+    lost = e;
+  });
   await client.connect();
+  const query = async (text: string) => {
+    if (lost) throw new Error(`Connection lost: ${lost.message}`);
+    await client.query(text);
+  };
   return {
     dialect: "pg",
-    exec: async (text) => void (await client.query(text)),
-    begin: async () => void (await client.query("BEGIN")),
-    commit: async () => void (await client.query("COMMIT")),
-    rollback: async () => void (await client.query("ROLLBACK")),
+    exec: query,
+    begin: () => query("BEGIN"),
+    commit: () => query("COMMIT"),
+    rollback: () => query("ROLLBACK"),
     close: () => client.end(),
   };
 }
 
 async function openMssql(conn: Extract<Connection, { kind: "mssql" }>, password: string): Promise<SeedTarget> {
-  const pool = await new sql.ConnectionPool({
+  const pool = new sql.ConnectionPool({
     server: conn.host,
     port: conn.port,
     database: conn.database,
@@ -76,23 +86,46 @@ async function openMssql(conn: Extract<Connection, { kind: "mssql" }>, password:
     connectionTimeout: 10_000,
     requestTimeout: 120_000,
     options: { encrypt: conn.encrypt, trustServerCertificate: conn.trustServerCertificate },
-  }).connect();
+  });
+  let lost: Error | null = null;
+  pool.on("error", (e) => {
+    lost = e;
+  });
+  await pool.connect();
+  const check = () => {
+    if (lost) throw new Error(`Connection lost: ${lost.message}`);
+  };
   let tx: sql.Transaction | null = null;
   return {
     dialect: "mssql",
-    exec: async (text) => void (await (tx ? new sql.Request(tx) : pool.request()).batch(text)),
+    exec: async (text) => {
+      check();
+      await (tx ? new sql.Request(tx) : pool.request()).batch(text);
+    },
     begin: async () => {
-      tx = new sql.Transaction(pool);
-      await tx.begin();
+      check();
+      if (tx) throw new Error("Transaction already open");
+      const t = new sql.Transaction(pool);
+      await t.begin();
+      tx = t;
     },
     commit: async () => {
-      await tx?.commit();
-      tx = null;
+      check();
+      const t = tx;
+      try {
+        await t?.commit();
+      } finally {
+        tx = null;
+      }
     },
     rollback: async () => {
       const t = tx;
       tx = null;
-      await t?.rollback();
+      try {
+        await t?.rollback();
+      } catch {
+        // keep the caller's original error
+      }
     },
     close: () => pool.close(),
   };
