@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, formatError, type TypesInfo } from "./api.ts";
 import { Connections } from "./components/Connections.tsx";
+import { Hero } from "./components/Hero.tsx";
 import { SchemaEditor } from "./components/SchemaEditor.tsx";
 import { SchemaList } from "./components/SchemaList.tsx";
 
@@ -48,6 +49,7 @@ export function App() {
           <a href="/docs" target="_blank" rel="noreferrer">API docs</a>
         </nav>
       </header>
+      {route.page === "list" && types && <Hero typeCount={types.types.length} />}
       <main>
         {error ? (
           <p className="error">Could not reach the server: {error}</p>

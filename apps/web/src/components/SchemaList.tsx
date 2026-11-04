@@ -48,7 +48,12 @@ export function SchemaList() {
         <a className="button primary" href="#/schemas/new" role="link">New schema</a>
       </div>
       {error && <p className="error">{error}</p>}
-      {schemas && schemas.length === 0 && <p className="muted">No schemas yet. Create one to start generating data.</p>}
+      {schemas && schemas.length === 0 && (
+        <div className="empty-state">
+          <p>No schemas yet. Create one to start generating data.</p>
+          <a className="button primary" href="#/schemas/new" role="link">Create your first schema</a>
+        </div>
+      )}
       {schemas && schemas.length > 0 && (
         <table className="list">
           <thead>
