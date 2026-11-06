@@ -51,7 +51,9 @@ export function App() {
           <a href="/docs" target="_blank" rel="noreferrer">API docs</a>
         </nav>
       </header>
-      {route.page === "list" && types && <Hero typeCount={types.types.length} />}
+      {route.page === "list" && types && (
+        <Hero typeCount={types.types.length} dbTargets={types.dbTargets} />
+      )}
       <main>
         {error ? (
           <p className="error">Could not reach the server: {error}</p>

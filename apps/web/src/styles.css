@@ -84,6 +84,9 @@ main { padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
 .hero-cta:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px rgb(255 255 255 / 0.2) inset, 0 12px 40px rgb(217 70 239 / 0.6); }
 .hero-ghost { color: #dff8ff; border: 1px solid rgb(94 241 255 / 0.35); background: rgb(10 20 45 / 0.45); backdrop-filter: blur(8px); }
 .hero-ghost:hover { background: rgb(94 241 255 / 0.12); transform: translateY(-2px); }
+/* The global `code` background is a light paper tone, which on the hero's near-black panel reads
+   as a bright sticker. Tinted so it sits inside the lead instead of punching out of it. */
+.hero-lead code { background: rgb(167 139 250 / 0.16); color: #d9e4ff; padding: 1px 6px; }
 .hero-chips { display: flex; flex-wrap: wrap; gap: 10px; margin: 34px 0 0; padding: 0; list-style: none; }
 .hero-chips li { padding: 7px 14px; border: 1px solid rgb(167 139 250 / 0.3); border-radius: 999px; background: rgb(12 16 40 / 0.55); backdrop-filter: blur(8px); color: #c7d2f0; font-size: 13px; }
 .hero-chips strong { color: #5ef1ff; }

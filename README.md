@@ -61,8 +61,14 @@ environment:
 ```
 
 The connection and seed routes are then never registered — they answer 404, not 403, so a prober
-learns nothing — and the UI drops the Connections tab and the *Seed database* button. Everything
-else still works: schemas, preview, all export formats and the mock API endpoints.
+learns nothing — and they disappear from `/docs` with them. Everything else still works: schemas,
+preview, all export formats and the mock API endpoints.
+
+The UI adjusts rather than going quiet. The Connections tab is gone, and where the *Seed database*
+button sat there is a panel saying that seeding works in full on a copy you run yourself, with the
+three commands to get one. The landing page says the same thing in its opening line. The point is
+that nobody reads a public instance and concludes mockgen cannot seed a database — it can, just
+not from a host that would have to keep their credentials in plain text.
 
 Two more things worth knowing before you publish one:
 

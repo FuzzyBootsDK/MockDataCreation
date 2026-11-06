@@ -9,6 +9,7 @@ import { DownloadDialog } from "./DownloadDialog.tsx";
 import { MockPanel } from "./MockPanel.tsx";
 import { Preview } from "./Preview.tsx";
 import { SeedDialog } from "./SeedDialog.tsx";
+import { SeedElsewherePanel } from "./SeedElsewherePanel.tsx";
 
 type Draft = NewSchema & { id: string; fields: Field[] };
 
@@ -246,14 +247,19 @@ export function SchemaEditor({ id, types }: { id: string | null; types: TypesInf
 
       {saved && (
         <div className="extras">
-          {/* Only where the server will accept it. A public instance has no seed route at all, so
-              offering the button would promise something that answers 404. */}
-          {types.dbTargets && (
+          {/* The button only where the server will accept it -- a public instance has no seed
+              route at all, so offering it would promise something that answers 404. But the
+              feature is not gone, only out of reach here, and a panel that simply vanished would
+              read as "mockgen cannot do this" to anyone who came looking for it. So the same
+              slot explains where it does work and how to get there. */}
+          {types.dbTargets ? (
             <section className="panel stack">
               <h3>Seed a database</h3>
               <p className="muted">Insert rows straight into PostgreSQL, SQL Server or SQLite.</p>
               <button type="button" disabled={dirty} onClick={() => setDialog("seed")}>Seed database…</button>
             </section>
+          ) : (
+            <SeedElsewherePanel />
           )}
           <MockPanel schema={saved} onToggle={toggleMock} />
         </div>
