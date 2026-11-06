@@ -37,8 +37,12 @@ export async function buildApp(opts: { config: Config; db: Db; logger?: boolean 
   previewRoutes(app, ctx);
   generateRoutes(app, ctx);
   mockRoutes(app, ctx);
-  connectionRoutes(app, ctx);
-  seedRoutes(app, ctx);
+  // Left unregistered rather than registered-and-refusing when databases are off, so a prober
+  // gets an ordinary 404 and learns nothing about what this build can do. See Config.dbTargets.
+  if (opts.config.dbTargets) {
+    connectionRoutes(app, ctx);
+    seedRoutes(app, ctx);
+  }
   await webRoutes(app, ctx);
   return app;
 }

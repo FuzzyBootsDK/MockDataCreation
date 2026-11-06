@@ -45,7 +45,9 @@ export function App() {
         <a href="#/" className="brand">mockgen</a>
         <nav>
           <a href="#/">Schemas</a>
-          <a href="#/connections">Connections</a>
+          {/* Absent on an instance built without database targets — the routes behind it are not
+              registered there, so the link would lead to a page that can only fail. */}
+          {types?.dbTargets && <a href="#/connections">Connections</a>}
           <a href="/docs" target="_blank" rel="noreferrer">API docs</a>
         </nav>
       </header>
@@ -58,7 +60,9 @@ export function App() {
         ) : (
           route.page === "edit" ? (
             <SchemaEditor key={route.id ?? "new"} id={route.id} types={types} />
-          ) : route.page === "connections" ? (
+          ) : route.page === "connections" && types.dbTargets ? (
+            // A bookmarked or hand-typed #/connections on a public instance falls through to the
+            // schema list rather than rendering a panel whose every call would 404.
             <Connections />
           ) : (
             <SchemaList />

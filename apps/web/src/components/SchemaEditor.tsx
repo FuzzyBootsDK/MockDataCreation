@@ -237,16 +237,24 @@ export function SchemaEditor({ id, types }: { id: string | null; types: TypesInf
             {issue("seed") && <small className="error">{issue("seed")}</small>}
           </label>
         </div>
-        <p className="muted">Save the schema to reuse it, seed a database or serve it as a mock API.</p>
+        <p className="muted">
+          {types.dbTargets
+            ? "Save the schema to reuse it, seed a database or serve it as a mock API."
+            : "Save the schema to reuse it or serve it as a mock API."}
+        </p>
       </section>
 
       {saved && (
         <div className="extras">
-          <section className="panel stack">
-            <h3>Seed a database</h3>
-            <p className="muted">Insert rows straight into PostgreSQL, SQL Server or SQLite.</p>
-            <button type="button" disabled={dirty} onClick={() => setDialog("seed")}>Seed database…</button>
-          </section>
+          {/* Only where the server will accept it. A public instance has no seed route at all, so
+              offering the button would promise something that answers 404. */}
+          {types.dbTargets && (
+            <section className="panel stack">
+              <h3>Seed a database</h3>
+              <p className="muted">Insert rows straight into PostgreSQL, SQL Server or SQLite.</p>
+              <button type="button" disabled={dirty} onClick={() => setDialog("seed")}>Seed database…</button>
+            </section>
+          )}
           <MockPanel schema={saved} onToggle={toggleMock} />
         </div>
       )}

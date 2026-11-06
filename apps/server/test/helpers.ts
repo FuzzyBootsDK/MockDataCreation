@@ -13,6 +13,9 @@ export function testConfig(over: Partial<Config> = {}): Config {
     mockScanLimit: 10_000,
     webDir: null,
     allowedHosts: [],
+    // On by default so the existing suite keeps exercising connections and seeding; the tests
+    // for a locked-down instance pass dbTargets: false explicitly.
+    dbTargets: true,
     ...over,
   };
 }

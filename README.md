@@ -35,6 +35,7 @@ For SQLite, the database file path is relative to the data directory (`DATA_DIR`
 | `MAX_ROWS` | `1000000` | Maximum rows per generate or seed request |
 | `MOCK_SCAN_LIMIT` | `10000` | Maximum rows scanned by mock equality filters |
 | `ALLOWED_HOSTS` | (empty) | Comma-separated extra hostnames accepted in the `Host` header (`localhost`, `127.0.0.1` and `[::1]` are always allowed) |
+| `DB_TARGETS` | `1` | Whether this instance may connect to databases. `0` removes the connection and seed routes and hides them in the UI — see [Running a public instance](#running-a-public-instance) |
 
 ## Security
 
@@ -42,6 +43,33 @@ For SQLite, the database file path is relative to the data directory (`DATA_DIR`
 - `docker-compose.yml` publishes ports on `127.0.0.1` only. To expose mockgen on a network, change the port bindings yourself, put it behind an authenticating proxy, and set `ALLOWED_HOSTS` to the hostnames users will type (requests with any other `Host` header get 403, which blocks DNS rebinding).
 - Connection passwords are stored in plain text in the local database and are returned by the API.
 - To keep a password out of the database, enter `${MOCKGEN_SECRET_NAME}` as the password and set that environment variable on the container. Only variables starting with `MOCKGEN_SECRET_` can be referenced.
+
+### Running a public instance
+
+`/api/connections` and `/api/seed` are the only routes that reach outside the container: a caller
+names any host and port, the server dials it, and seeding writes into whatever answers. On a
+private instance that is the point. On one anybody can reach it is an unauthenticated way into
+whatever network the container sits on — a visitor can probe for open ports and truncate a table
+on a machine they were never meant to see.
+
+So set `DB_TARGETS=0` on any instance that is reachable from the internet:
+
+```yaml
+environment:
+  DB_TARGETS: "0"
+  ALLOWED_HOSTS: "mock.example.com"
+```
+
+The connection and seed routes are then never registered — they answer 404, not 403, so a prober
+learns nothing — and the UI drops the Connections tab and the *Seed database* button. Everything
+else still works: schemas, preview, all export formats and the mock API endpoints.
+
+Two more things worth knowing before you publish one:
+
+- **Schemas are global and unauthenticated.** Any visitor can edit or delete any schema on that
+  instance. Give the public instance its own data volume rather than sharing yours.
+- **Nothing is rate limited.** `MAX_ROWS` caps one request; it does not cap how many requests
+  arrive. Put it behind a proxy that does, if that matters to you.
 
 ## Field types
 

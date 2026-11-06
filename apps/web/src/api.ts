@@ -7,6 +7,11 @@ export interface TypesInfo {
   dialects: Dialect[];
   helpers: string[];
   maxRows: number;
+  /**
+   * False on an instance started with DB_TARGETS=0, where the connection and seed routes are not
+   * registered at all. The UI hides both rather than offering buttons that can only 404.
+   */
+  dbTargets: boolean;
 }
 
 export type ConnectionKind = "pg" | "mssql" | "sqlite";
